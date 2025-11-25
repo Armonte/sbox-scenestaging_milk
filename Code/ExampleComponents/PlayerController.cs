@@ -47,21 +47,24 @@ public class PlayerController : Component
 			EyeAngles = ee;
 
 			var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
-
-			var lookDir = EyeAngles.ToRotation();
-
-			if ( FirstPerson )
+			if ( cam.IsValid() )
 			{
-				cam.WorldPosition = Eye.WorldPosition;
-				cam.WorldRotation = lookDir;
-			}
-			else
-			{
-				cam.WorldPosition = WorldPosition + lookDir.Backward * 300 + Vector3.Up * 75.0f;
-				cam.WorldRotation = lookDir;
-			}
+				var lookDir = EyeAngles.ToRotation();
 
-
+				if ( FirstPerson )
+				{
+					if ( Eye.IsValid() )
+					{
+						cam.WorldPosition = Eye.WorldPosition;
+						cam.WorldRotation = lookDir;
+					}
+				}
+				else
+				{
+					cam.WorldPosition = WorldPosition + lookDir.Backward * 300 + Vector3.Up * 75.0f;
+					cam.WorldRotation = lookDir;
+				}
+			}
 
 			IsRunning = Input.Down( "Run" );
 		}
@@ -125,6 +128,7 @@ public class PlayerController : Component
 		BuildWishVelocity();
 
 		var cc = GameObject.Components.Get<CharacterController>();
+		if ( !cc.IsValid() ) return;
 
 		if ( cc.IsOnGround && Input.Down( "Jump" ) )
 		{

@@ -1,0 +1,25 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+  </Configurations>
+  <Project Path="Code/testbed.csproj" />
+  <Project Path="Editor/testbed.editor.csproj" />
+  <Folder Name="/Addons/">
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/addons/base/Code/Base Library.csproj" />
+  </Folder>
+  <Folder Name="/Libraries/">
+    <Project Path="Libraries/facepunch.libsdf/Code/libsdf.csproj" />
+    <Project Path="Libraries/JiggleBones/Code/jigglebones.csproj" />
+    <Project Path="Libraries/ShatterGlass/Code/shatterglass.csproj" />
+    <Project Path="Libraries/SplineTools/Code/splinetools.csproj" />
+    <Project Path="Libraries/SplineTools/Editor/splinetools.editor.csproj" />
+    <Project Path="Libraries/weaponlab/Code/weaponlab.csproj" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/addons/tools/Code/Base Editor Library.csproj" />
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/editor/ActionGraph/Code/actiongraph.csproj" />
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/editor/Hammer/Code/hammer.csproj" />
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/editor/MovieMaker/Code/moviemaker.csproj" />
+    <Project Path="C:/Program Files (x86)/Steam/steamapps/common/sbox/editor/ShaderGraph/Code/shadergraph.csproj" />
+  </Folder>
+</Solution>
