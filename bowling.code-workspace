@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../Program Files (x86)/steam/steamapps/common/sbox"
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "Dracula Theme"
+	}
+}

@@ -1,0 +1,70 @@
+@using Sandbox;
+@using Sandbox.UI;
+@using Bowling;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root class="world-character-select-panel @(IsTransitioningOut ? "transitioning-out" : "")">
+	<div class="header">
+		<h2>@CharacterName</h2>
+		<div class="character-icon">@CharacterIcon</div>
+	</div>
+	
+	<div class="character-info">
+		<div class="character-role">@CharacterRole</div>
+		<div class="character-description">
+			@foreach(var feature in CharacterFeatures)
+			{
+				<div class="feature">@feature</div>
+			}
+		</div>
+		<button class="select-button" @onclick="SelectThisCharacter">
+			Select
+		</button>
+	</div>
+</root>
+
+@code {
+	BowlingGameFlowManager FlowManager => Scene?.GetAllComponents<BowlingGameFlowManager>().FirstOrDefault();
+	private CharacterSelectionUI _selector;
+	CharacterSelectionUI Selector => _selector ?? Scene?.GetAllComponents<CharacterSelectionUI>().FirstOrDefault();
+	
+	[Property] public int CharacterId { get; set; } = 1;
+	[Property] public string CharacterName { get; set; } = "Striker";
+	[Property] public string CharacterIcon { get; set; } = "🎯";
+	[Property] public string CharacterRole { get; set; } = "PRECISION";
+	[Property] public string[] CharacterFeatures { get; set; } = new[] { "• High accuracy", "• Power shots", "• Strike specialist" };
+	
+	[Sync] public bool IsTransitioningOut { get; set; } = false;
+	
+	public void SetSelector(CharacterSelectionUI selector)
+	{
+		_selector = selector;
+		Log.Info($"WorldCharacterSelectPanel selector set to: {selector != null}");
+	}
+	
+	void SelectThisCharacter()
+	{
+		if (IsTransitioningOut)
+		{
+			Log.Warning($"Cannot select {CharacterName} - already transitioning");
+			return;
+		}
+		
+		Log.Info($"Starting character selection: {CharacterName}");
+		IsTransitioningOut = true;
+		StateHasChanged();
+		
+		Selector?.RequestCharacterSelection(CharacterId);
+	}
+	
+	protected override int BuildHash()
+	{
+		return HashCode.Combine(
+			IsTransitioningOut,
+			FlowManager,
+			CharacterId
+		);
+	}
+}
+

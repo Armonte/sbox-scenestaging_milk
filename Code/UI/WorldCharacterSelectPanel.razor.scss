@@ -1,0 +1,106 @@
+WorldCharacterSelectPanel {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 50%, rgba(10, 15, 28, 0.95) 100%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	font-family: Poppins, system-ui, sans-serif;
+	pointer-events: all;
+	transition: all 0.5s ease-out;
+	color: #e8e8e8;
+	backdrop-filter: blur(10px);
+	border-radius: 16px;
+	padding: 30px;
+	border: 1px solid rgba(79, 172, 254, 0.3);
+	
+	&.transitioning-out {
+		opacity: 0;
+		transform: scale(0.9);
+		pointer-events: none;
+	}
+	
+	.header {
+		text-align: center;
+		margin-bottom: 20px;
+		
+		h2 {
+			font-size: 32px;
+			font-weight: 700;
+			color: #fff;
+			text-shadow: 
+				0 0 15px rgba(139, 92, 246, 0.6),
+				0 2px 10px rgba(79, 172, 254, 0.4);
+			margin-bottom: 12px;
+			letter-spacing: 1px;
+		}
+		
+		.character-icon {
+			font-size: 48px;
+			filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+		}
+	}
+	
+	.character-info {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		width: 100%;
+		
+		.character-role {
+			text-align: center;
+			font-size: 11px;
+			font-weight: 700;
+			color: #64748b;
+			letter-spacing: 1.5px;
+			text-transform: uppercase;
+			padding: 6px 12px;
+			background-color: #64748b26;
+			border-radius: 16px;
+			border: 1px solid #64748b33;
+		}
+		
+		.character-description {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			
+			.feature {
+				color: #cbd5e1;
+				font-size: 13px;
+				font-weight: 400;
+				font-family: Poppins;
+			}
+		}
+		
+		.select-button {
+			width: 100%;
+			padding: 12px 24px;
+			background: linear-gradient(145deg, #1e2139 0%, #252845 100%);
+			border: 1px solid rgba(79, 172, 254, 0.3);
+			border-radius: 8px;
+			cursor: pointer;
+			transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+			font-family: Poppins;
+			font-size: 14px;
+			font-weight: 600;
+			color: #f1f5f9;
+			
+			&:hover {
+				transform: translateY(-2px);
+				box-shadow: 
+					0 8px 16px rgba(0, 0, 0, 0.4),
+					0 0 0 1px rgba(79, 172, 254, 0.4);
+				border-color: rgba(79, 172, 254, 0.5);
+				background: linear-gradient(145deg, #252845 0%, #2d3255 100%);
+			}
+			
+			&:active {
+				transform: translateY(0);
+			}
+		}
+	}
+}
+

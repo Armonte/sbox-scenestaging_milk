@@ -1,0 +1,127 @@
+@using Sandbox;
+@using Sandbox.UI;
+@using Bowling;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root class="character-select-panel @(IsTransitioningOut ? "transitioning-out" : "")">
+	<div class="header">
+		<h1>Choose Your Character</h1>
+		<p>Select your bowler</p>
+	</div>
+	
+	<div class="character-grid">
+		@foreach (var character in AvailableCharacters)
+		{
+			<div class="character-card @(CanSelectCharacter(character) ? "" : "disabled")" 
+				 @onclick="@(() => SelectCharacter(character))">
+				<div class="character-icon">@character.Icon</div>
+				<h3>@character.Name</h3>
+				<div class="character-role">@character.Role</div>
+				<div class="character-description">
+					@foreach(var feature in character.Features)
+					{
+						<div class="feature">@feature</div>
+					}
+				</div>
+				<div class="spacer"></div>
+				<div class="character-status">
+					@if (IsCharacterSelected(character))
+					{
+						<span class="selected">Selected</span>
+					}
+					else
+					{
+						<span class="available">Available</span>
+					}
+				</div>
+			</div>
+		}
+	</div>
+</root>
+
+@code {
+	BowlingGameFlowManager FlowManager => Scene?.GetAllComponents<BowlingGameFlowManager>().FirstOrDefault();
+	private CharacterSelectionUI _selector;
+	CharacterSelectionUI Selector => _selector ?? Scene?.GetAllComponents<CharacterSelectionUI>().FirstOrDefault();
+	
+	[Sync] public bool IsTransitioningOut { get; set; } = false;
+	
+	public void SetSelector(CharacterSelectionUI selector)
+	{
+		_selector = selector;
+		Log.Info($"CharacterSelectPanel selector set to: {selector != null}");
+	}
+	
+	class CharacterInfo
+	{
+		public string Name { get; set; }
+		public string Icon { get; set; }
+		public string Role { get; set; }
+		public string[] Features { get; set; }
+		public int Id { get; set; }
+	}
+	
+	CharacterInfo[] AvailableCharacters => new CharacterInfo[]
+	{
+		new CharacterInfo 
+		{ 
+			Name = "Striker", 
+			Icon = "🎯", 
+			Role = "PRECISION",
+			Features = new[] { "• High accuracy", "• Power shots", "• Strike specialist" },
+			Id = 1
+		},
+		new CharacterInfo 
+		{ 
+			Name = "Spinner", 
+			Icon = "🌀", 
+			Role = "CONTROL",
+			Features = new[] { "• Curve control", "• Spin mastery", "• Pin manipulation" },
+			Id = 2
+		},
+		new CharacterInfo 
+		{ 
+			Name = "Speedster", 
+			Icon = "⚡", 
+			Role = "SPEED",
+			Features = new[] { "• Fast delivery", "• Quick recovery", "• Momentum builder" },
+			Id = 3
+		}
+	};
+	
+	bool CanSelectCharacter(CharacterInfo character)
+	{
+		return !IsCharacterSelected(character) && !IsTransitioningOut;
+	}
+	
+	bool IsCharacterSelected(CharacterInfo character)
+	{
+		// TODO: Check if this character is already selected by another player
+		return false;
+	}
+	
+	void SelectCharacter(CharacterInfo character)
+	{
+		if (!CanSelectCharacter(character) || IsTransitioningOut)
+		{
+			Log.Warning($"Cannot select {character.Name} - already selected or transitioning");
+			return;
+		}
+		
+		Log.Info($"Starting character selection: {character.Name}");
+		IsTransitioningOut = true;
+		StateHasChanged();
+		
+		Selector?.RequestCharacterSelection(character.Id);
+	}
+	
+	protected override int BuildHash()
+	{
+		return HashCode.Combine(
+			IsTransitioningOut,
+			FlowManager
+		);
+	}
+}
+
