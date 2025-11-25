@@ -1,24 +1,27 @@
 using Sandbox;
 
-public sealed class SelfDestructComponent : Component
+namespace Sandbox
 {
-	[Property] float Seconds { get; set; }
-
-	TimeUntil timeUntilDie;
-
-	protected override void OnEnabled()
+	public sealed class SelfDestructComponent : Component
 	{
-		timeUntilDie = Seconds;
-	}
+		[Property] float Seconds { get; set; }
 
-	protected override void OnUpdate()
-	{
-		if ( GameObject.IsProxy )
-			return;
+		TimeUntil timeUntilDie;
 
-		if ( timeUntilDie <= 0.0f )
+		protected override void OnEnabled()
 		{
-			GameObject.Destroy();
+			timeUntilDie = Seconds;
+		}
+
+		protected override void OnUpdate()
+		{
+			if ( GameObject.IsProxy )
+				return;
+
+			if ( timeUntilDie <= 0.0f )
+			{
+				GameObject.Destroy();
+			}
 		}
 	}
 }

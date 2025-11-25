@@ -1,15 +1,18 @@
+using Sandbox;
 
-public sealed class NetworkSession : Component
+namespace Sandbox
 {
-	protected override void OnStart()
+	public sealed class NetworkSession : Component
 	{
-		//
-		// Create a lobby if we're not connected
-		//
-		if ( !Networking.IsActive )
+		protected override void OnStart()
 		{
-			Networking.CreateLobby( new() );
+			//
+			// Create a lobby if we're not connected
+			//
+			if ( !Networking.IsActive )
+			{
+				Networking.CreateLobby( new() );
+			}
 		}
 	}
-
 }

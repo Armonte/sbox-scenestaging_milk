@@ -15,6 +15,18 @@
     "OwnerTransfer": 1,
     "Components": [
       {
+        "__type": "Reclaimer.MilkPortal",
+        "__guid": "a1b2c3d4-e5f6-4789-0123-456789abcdef",
+        "__enabled": true,
+        "Lifetime": 60,
+        "OnComponentDestroy": null,
+        "OnComponentDisabled": null,
+        "OnComponentEnabled": null,
+        "OnComponentFixedUpdate": null,
+        "OnComponentStart": null,
+        "OnComponentUpdate": null
+      },
+      {
         "__type": "Sandbox.HullCollider",
         "__guid": "d5dd7e29-2f57-4ba1-98cc-ad2c980680b9",
         "__enabled": true,
