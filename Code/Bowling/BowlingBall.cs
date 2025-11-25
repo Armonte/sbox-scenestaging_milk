@@ -23,31 +23,32 @@ public sealed class BowlingBall : Component, Component.ICollisionListener
 		base.OnStart();
 
 		// Get existing components - search in children too since Rigidbody/Collider are on child GameObject
-		_rigidbody = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		_collider = Components.Get<SphereCollider>( FindMode.EverythingInSelfAndDescendants );
+		_rigidbody = Components.Get<Rigidbody>(FindMode.EverythingInSelfAndDescendants);
+		_collider = Components.Get<SphereCollider>(FindMode.EverythingInSelfAndDescendants);
 
-		if ( !_rigidbody.IsValid() )
+		if (!_rigidbody.IsValid())
 		{
-			Log.Warning( "BowlingBall: No Rigidbody found on prefab!" );
+			Log.Warning("BowlingBall: No Rigidbody found on prefab!");
 			return;
 		}
 
-		if ( !_collider.IsValid() )
+		if (!_collider.IsValid())
 		{
-			Log.Warning( "BowlingBall: No SphereCollider found on prefab!" );
+			Log.Warning("BowlingBall: No SphereCollider found on prefab!");
 		}
 		else
 		{
 			// Ensure collider has valid radius (positive value)
-			if ( _collider.Radius <= 0 )
+			if (_collider.Radius <= 0)
 			{
-				Log.Warning( $"BowlingBall: Invalid collider radius ({_collider.Radius}), setting to default 32" );
+				Log.Warning($"BowlingBall: Invalid collider radius ({_collider.Radius}), setting to default 32");
 				_collider.Radius = 32.0f;
 			}
+			
 		}
 
 		// Tag the ball for easy identification
-		Tags.Add( "bowling_ball" );
+		Tags.Add("bowling_ball");
 
 		// Setup physics properties
 		_rigidbody.MassOverride = Mass;
@@ -60,34 +61,33 @@ public sealed class BowlingBall : Component, Component.ICollisionListener
 	/// <summary>
 	/// Throw the ball with a given direction and force
 	/// </summary>
-	public void Throw( Vector3 direction, float forceMultiplier = 1.0f )
+	public void Throw(Vector3 direction, float forceMultiplier = 1.0f)
 	{
-		if ( IsThrown )
+		if (IsThrown)
 			return;
 
 		IsThrown = true;
 		_timeSinceThrown = 0;
 
 		// Re-fetch components in case they weren't initialized yet or after unparenting
-		if ( !_rigidbody.IsValid() )
+		if (!_rigidbody.IsValid())
 		{
-			_rigidbody = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+			_rigidbody = Components.Get<Rigidbody>(FindMode.EverythingInSelfAndDescendants);
 		}
 		
-		if ( !_collider.IsValid() )
+		if (!_collider.IsValid())
 		{
-			_collider = Components.Get<SphereCollider>( FindMode.EverythingInSelfAndDescendants );
+			_collider = Components.Get<SphereCollider>(FindMode.EverythingInSelfAndDescendants);
 		}
 
 		// Enable physics when throwing
-		if ( _rigidbody.IsValid() )
+		if (_rigidbody.IsValid())
 		{
 			// Ensure collider is enabled for collisions
-			if ( _collider.IsValid() )
+			if (_collider.IsValid())
 			{
 				_collider.Enabled = true;
-				// Ensure collider is not a trigger
-				if ( _collider.IsTrigger )
+				if (_collider.IsTrigger)
 				{
 					_collider.IsTrigger = false;
 				}
@@ -109,22 +109,22 @@ public sealed class BowlingBall : Component, Component.ICollisionListener
 		}
 		else
 		{
-			Log.Error( "BowlingBall: Cannot throw - Rigidbody is not valid!" );
+			Log.Error("BowlingBall: Cannot throw - Rigidbody is not valid!");
 			return;
 		}
 
-		var throwForce = (ThrowForce * forceMultiplier).Clamp( 0, MaxThrowForce );
+		var throwForce = (ThrowForce * forceMultiplier).Clamp(0, MaxThrowForce);
 		var velocity = direction.Normal * throwForce;
 
 		_rigidbody.Velocity = velocity;
 
-		Log.Info( $"Ball thrown with force: {throwForce}, velocity: {velocity}, MotionEnabled: {_rigidbody.MotionEnabled}, Gravity: {_rigidbody.Gravity}, ColliderEnabled: {(_collider.IsValid() ? _collider.Enabled : false)}" );
+		Log.Info($"Ball thrown with force: {throwForce}, velocity: {velocity}, MotionEnabled: {_rigidbody.MotionEnabled}, Gravity: {_rigidbody.Gravity}");
 	}
 	
 	/// <summary>
 	/// Reset the ball to its starting position
 	/// </summary>
-	public void Reset( Vector3 position, Rotation rotation )
+	public void Reset(Vector3 position, Rotation rotation)
 	{
 		IsThrown = false;
 		IsInGutter = false;
@@ -133,7 +133,7 @@ public sealed class BowlingBall : Component, Component.ICollisionListener
 		WorldPosition = position;
 		WorldRotation = rotation;
 		
-		if ( _rigidbody.IsValid() )
+		if (_rigidbody.IsValid())
 		{
 			_rigidbody.Velocity = Vector3.Zero;
 			_rigidbody.AngularVelocity = Vector3.Zero;
@@ -144,72 +144,55 @@ public sealed class BowlingBall : Component, Component.ICollisionListener
 	
 	protected override void OnFixedUpdate()
 	{
-		if ( !IsThrown || IsInGutter )
+		if (!IsThrown || IsInGutter)
 			return;
 
 		// Apply rolling resistance
-		if ( _rigidbody.Velocity.Length > 0.1f )
+		if (_rigidbody.Velocity.Length > 0.1f)
 		{
 			var resistance = _rigidbody.Velocity.Normal * RollingResistance * 100.0f;
 			_rigidbody.Velocity -= resistance * Time.Delta;
 		}
 
 		// Stop the ball if it's moving very slowly and on ground
-		if ( _rigidbody.Velocity.Length < 10.0f && _rigidbody.Velocity.z < 1.0f )
+		if (_rigidbody.Velocity.Length < 10.0f && _rigidbody.Velocity.z < 1.0f)
 		{
 			_rigidbody.Velocity = Vector3.Zero;
 			_rigidbody.AngularVelocity = Vector3.Zero;
 		}
 	}
 
-	protected override void OnUpdate()
-	{
-		// Debug: Draw the collider sphere
-		if ( _collider.IsValid() )
-		{
-			var radius = _collider.Radius * WorldScale.x;
-			var center = WorldPosition + _collider.Center;
-			Gizmo.Draw.Color = IsThrown ? Color.Green : Color.Yellow;
-			Gizmo.Draw.LineSphere( center, radius );
-		}
-	}
 	
 	// Handle collisions with pins
-	public void OnCollisionStart( Collision collision )
+	public void OnCollisionStart(Collision collision)
 	{
 		// Ignore collisions if ball hasn't been thrown yet
-		if ( !IsThrown )
+		if (!IsThrown)
+			return;
+			
+		// Ignore player collisions
+		if (collision.Other.GameObject.Tags.Has("player"))
 			return;
 
-		// Debug: Log all collisions to see what we're hitting
-		Log.Info( $"Ball collision with: {collision.Other.GameObject.Name}, Tags: {string.Join(", ", collision.Other.GameObject.Tags.List)}" );
-
 		// Check if we hit a pin
-		if ( collision.Other.GameObject.Tags.Has( "bowling_pin" ) )
+		if (collision.Other.GameObject.Tags.Has("bowling_pin"))
 		{
+			Log.Info($"Ball collision with: {collision.Other.GameObject.Name}");
 			var pin = collision.Other.GameObject.Components.Get<BowlingPin>();
-			if ( pin.IsValid() )
+			if (pin.IsValid())
 			{
-				pin.OnHitByBall( collision );
+				pin.OnHitByBall(collision);
 			}
-		}
-		
-		// Check if we hit the floor (usually a static mesh collider)
-		var otherCollider = collision.Other.GameObject.Components.Get<Collider>();
-		if ( otherCollider.IsValid() && otherCollider.Static )
-		{
-			Log.Info( $"Ball hit floor/surface: {collision.Other.GameObject.Name}" );
 		}
 	}
 	
-	public void OnCollisionUpdate( Collision collision )
+	public void OnCollisionUpdate(Collision collision)
 	{
 		// Additional collision handling if needed
 	}
 	
-	public void OnCollisionStop( CollisionStop collision )
+	public void OnCollisionStop(CollisionStop collision)
 	{
 		// Cleanup if needed
 	}
 }
-

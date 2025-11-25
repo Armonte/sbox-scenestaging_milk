@@ -1,0 +1,501 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+
+<root>
+	<!-- Prototype Marquee -->
+	<div class="prototype-marquee">
+		<div class="marquee-track" style="left: -@(MarqueeOffset % MarqueeTextWidth)px;">
+			<span class="marquee-text">@MarqueeContent</span><span class="marquee-text">@MarqueeContent</span>
+		</div>
+	</div>
+
+	<!-- Player Name - top left -->
+	<div class="player-info">
+		<div class="player-name">@PlayerName</div>
+	</div>
+
+	<!-- Score Display - top right -->
+	<div class="score-panel">
+		<div class="frame-info">
+			<div class="label">FRAME</div>
+			<div class="value">@CurrentFrame / @TotalFrames</div>
+		</div>
+		<div class="roll-info">
+			<div class="label">ROLL</div>
+			<div class="value">@CurrentRoll</div>
+		</div>
+		<div class="total-score">
+			<div class="label">SCORE</div>
+			<div class="value">@TotalScore</div>
+		</div>
+		<div class="pins-info">
+			<div class="label">PINS</div>
+			<div class="value">@PinsRemaining</div>
+		</div>
+	</div>
+
+	<!-- Charge Meter (only visible when charging) - V-shaped -->
+	@if (IsCharging)
+	{
+		<div class="charge-container">
+			<div class="charge-percent" style="color: @ChargeColor;">@((ChargePercent * 100).FloorToInt())%</div>
+			<div class="charge-bar-v">
+				@for (int i = 10; i >= 1; i--)
+				{
+					var segmentThreshold = i / 10.0f;
+					var isFilled = ChargePercent >= segmentThreshold;
+					var segColor = isFilled ? GetSegmentColor(i) : "";
+					<div class="charge-segment seg-@i @(isFilled ? "filled" : "")" style="@(isFilled ? $"background-color: {segColor};" : "")"></div>
+				}
+			</div>
+			<div class="charge-label">POWER</div>
+		</div>
+	}
+
+	<!-- Big Announcement (Strike/Spare/Gutter) -->
+	@if (ShowAnnouncement)
+	{
+		<div class="announcement-container">
+			<div class="announcement @AnnouncementClass" style="opacity: @AnnouncementOpacity;">
+				@AnnouncementText
+			</div>
+		</div>
+	}
+
+	<!-- Game State Indicator (Settling/Resetting) - small side indicator -->
+	@if (ShowGameState)
+	{
+		<div class="game-state-side @GameStateClass">
+			@GameStateText
+		</div>
+	}
+
+	<!-- Game Over Panel -->
+	@if (IsGameOver)
+	{
+		<div class="game-over-panel">
+			<div class="game-over-title">GAME OVER</div>
+			<div class="final-score">Final Score: @TotalScore</div>
+			<div class="restart-hint">Press R to restart</div>
+		</div>
+	}
+</root>
+
+@code
+{
+	private BowlingGameManager _gameManager;
+	private BowlingPlayerController _playerController;
+	
+	// Announcement system - poll-based instead of event-based for reliability
+	private string _announcementText = "";
+	private string _announcementClass = "";
+	private TimeSince _announcementTime;
+	private const float AnnouncementDuration = 2.0f;
+	private const float FadeInTime = 0.15f;
+	private const float FadeOutTime = 0.3f;
+	
+	// Marquee scrolling
+	private float _marqueeOffset = 0f;
+	private const float MarqueeSpeed = 60f; // pixels per second
+	private const float MarqueeTextWidth = 1800f; // approximate width of one text block
+	private const string MarqueeContent = "PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - PROTOTYPE - ";
+	
+	// State tracking for detecting strikes/spares
+	private int _lastPinsRemaining = 10;
+	private int _pinsAtStartOfRoll = 10; // Track pins when throw started
+	private int _lastRoll = 1;
+	private int _lastFrame = 1;
+	private BowlingGameManager.GameState _lastState = BowlingGameManager.GameState.WaitingForThrow;
+	private bool _rollProcessed = false; // Prevent double announcements
+
+	/// <summary>
+	/// Optional: Set this to link HUD to a specific game manager (for multiplayer with multiple lanes)
+	/// </summary>
+	[Property] public BowlingGameManager LinkedGameManager { get; set; }
+	
+	/// <summary>
+	/// Optional: Set this to link HUD to a specific player controller (for multiplayer)
+	/// </summary>
+	[Property] public BowlingPlayerController LinkedPlayerController { get; set; }
+
+	public string PlayerName
+	{
+		get
+		{
+			if (Connection.Local != null)
+				return Connection.Local.DisplayName;
+			return "Player";
+		}
+	}
+
+	public bool IsCharging => _playerController?.IsCharging ?? false;
+	public float ChargePercent => _playerController?.ChargePercent ?? 0f;
+	
+	// Charge color: green -> yellow -> orange -> red
+	public string ChargeColor
+	{
+		get
+		{
+			float t = ChargePercent;
+			return GetColorForPercent(t);
+		}
+	}
+	
+	// Get color for a specific segment (1 = top/low power, 10 = bottom/high power)
+	private string GetSegmentColor(int segment)
+	{
+		float t = segment / 10.0f;
+		return GetColorForPercent(t);
+	}
+	
+	private string GetColorForPercent(float t)
+	{
+		int r, g, b;
+		
+		if (t < 0.33f)
+		{
+			// Green to Yellow (0% - 33%)
+			float p = t / 0.33f;
+			r = (int)(50 + p * 205);  // 50 -> 255
+			g = 220;
+			b = 50;
+		}
+		else if (t < 0.66f)
+		{
+			// Yellow to Orange (33% - 66%)
+			float p = (t - 0.33f) / 0.33f;
+			r = 255;
+			g = (int)(220 - p * 90);  // 220 -> 130
+			b = 50;
+		}
+		else
+		{
+			// Orange to Red (66% - 100%)
+			float p = (t - 0.66f) / 0.34f;
+			r = 255;
+			g = (int)(130 - p * 90);  // 130 -> 40
+			b = (int)(50 - p * 20);   // 50 -> 30
+		}
+		
+		return $"rgb({r}, {g}, {b})";
+	}
+	
+	public int CurrentFrame => _gameManager?.CurrentFrame ?? 1;
+	public int CurrentRoll => _gameManager?.CurrentRoll ?? 1;
+	public int TotalScore => _gameManager?.TotalScore ?? 0;
+	public int TotalFrames => _gameManager?.TotalFrames ?? 10;
+	public int PinsRemaining => _gameManager?.PinsRemaining ?? 10;
+	
+	public bool IsGameOver => _gameManager?.CurrentState == BowlingGameManager.GameState.GameOver;
+	
+	public bool ShowGameState => _gameManager?.CurrentState == BowlingGameManager.GameState.Settling 
+								|| _gameManager?.CurrentState == BowlingGameManager.GameState.ResettingPins;
+	
+	public bool ShowAnnouncement => _announcementTime < AnnouncementDuration && !string.IsNullOrEmpty(_announcementText);
+	public string AnnouncementText => _announcementText;
+	public string AnnouncementClass => _announcementClass;
+	
+	// Calculate opacity for fade in/out
+	public float AnnouncementOpacity
+	{
+		get
+		{
+			if (!ShowAnnouncement) return 0f;
+			
+			float elapsed = _announcementTime;
+			float remaining = AnnouncementDuration - elapsed;
+			
+			// Fade in
+			if (elapsed < FadeInTime)
+				return elapsed / FadeInTime;
+			
+			// Fade out
+			if (remaining < FadeOutTime)
+				return remaining / FadeOutTime;
+			
+			return 1f;
+		}
+	}
+	
+	// Marquee offset for scrolling
+	public float MarqueeOffset => _marqueeOffset;
+	
+	public string GameStateText
+	{
+		get
+		{
+			if (_gameManager == null) return "";
+			return _gameManager.CurrentState switch
+			{
+				BowlingGameManager.GameState.Settling => "Settling...",
+				BowlingGameManager.GameState.ResettingPins => "Resetting pins...",
+				_ => ""
+			};
+		}
+	}
+	
+	public string GameStateClass
+	{
+		get
+		{
+			if (_gameManager == null) return "";
+			return _gameManager.CurrentState switch
+			{
+				BowlingGameManager.GameState.Settling => "settling",
+				BowlingGameManager.GameState.ResettingPins => "resetting",
+				_ => ""
+			};
+		}
+	}
+
+	protected override void OnStart()
+	{
+		FindReferences();
+		SubscribeToEvents();
+	}
+	
+	protected override void OnDestroy()
+	{
+		UnsubscribeFromEvents();
+	}
+
+	protected override void OnUpdate()
+	{
+		// Refresh references if needed
+		if (_gameManager == null || !_gameManager.IsValid())
+		{
+			FindReferences();
+			SubscribeToEvents(); // Re-subscribe after finding new references
+		}
+		if (_playerController == null || !_playerController.IsValid())
+		{
+			FindPlayerController();
+		}
+		
+		// Check for bowling events by watching state changes
+		CheckForBowlingEvents();
+		
+		// Scroll the marquee (modulo handles the loop in the style binding)
+		_marqueeOffset += MarqueeSpeed * Time.Delta;
+	}
+	
+	private void FindReferences()
+	{
+		if (LinkedGameManager.IsValid())
+		{
+			_gameManager = LinkedGameManager;
+		}
+		else
+		{
+			_gameManager = Scene.GetAllComponents<BowlingGameManager>().FirstOrDefault();
+		}
+		
+		FindPlayerController();
+		
+		// Initialize tracking state
+		if (_gameManager != null)
+		{
+			_lastPinsRemaining = _gameManager.PinsRemaining;
+			_lastRoll = _gameManager.CurrentRoll;
+			_lastFrame = _gameManager.CurrentFrame;
+			_lastState = _gameManager.CurrentState;
+		}
+	}
+	
+	private void FindPlayerController()
+	{
+		if (LinkedPlayerController.IsValid())
+		{
+			_playerController = LinkedPlayerController;
+		}
+		else
+		{
+			_playerController = Components.GetInAncestorsOrSelf<BowlingPlayerController>();
+			
+			if (_playerController == null || !_playerController.IsValid())
+			{
+				_playerController = Scene.GetAllComponents<BowlingPlayerController>().FirstOrDefault();
+			}
+		}
+	}
+	
+	private void SubscribeToEvents()
+	{
+		if (_gameManager != null)
+		{
+			// Basic events
+			_gameManager.OnGutterBall -= OnGutterBall;
+			_gameManager.OnGutterBall += OnGutterBall;
+			_gameManager.OnStrike -= OnStrike;
+			_gameManager.OnStrike += OnStrike;
+			_gameManager.OnSpare -= OnSpare;
+			_gameManager.OnSpare += OnSpare;
+			
+			// Oddball special events
+			_gameManager.OnDouble -= OnDouble;
+			_gameManager.OnDouble += OnDouble;
+			_gameManager.OnTurkey -= OnTurkey;
+			_gameManager.OnTurkey += OnTurkey;
+			_gameManager.OnHambone -= OnHambone;
+			_gameManager.OnHambone += OnHambone;
+			_gameManager.OnYahtzee -= OnYahtzee;
+			_gameManager.OnYahtzee += OnYahtzee;
+			_gameManager.OnSixPack -= OnSixPack;
+			_gameManager.OnSixPack += OnSixPack;
+			_gameManager.OnPerfectGame -= OnPerfectGame;
+			_gameManager.OnPerfectGame += OnPerfectGame;
+			_gameManager.OnSplitPickup -= OnSplitPickup;
+			_gameManager.OnSplitPickup += OnSplitPickup;
+		}
+	}
+	
+	private void UnsubscribeFromEvents()
+	{
+		if (_gameManager != null)
+		{
+			_gameManager.OnGutterBall -= OnGutterBall;
+			_gameManager.OnStrike -= OnStrike;
+			_gameManager.OnSpare -= OnSpare;
+			_gameManager.OnDouble -= OnDouble;
+			_gameManager.OnTurkey -= OnTurkey;
+			_gameManager.OnHambone -= OnHambone;
+			_gameManager.OnYahtzee -= OnYahtzee;
+			_gameManager.OnSixPack -= OnSixPack;
+			_gameManager.OnPerfectGame -= OnPerfectGame;
+			_gameManager.OnSplitPickup -= OnSplitPickup;
+		}
+	}
+	
+	private void OnGutterBall()
+	{
+		ShowAnnouncementMessage("GUTTER BALL!", "gutter");
+	}
+	
+	private void OnStrike()
+	{
+		// Only show basic strike if not a streak (streak events will override)
+		if (_gameManager?.StrikeStreak <= 1)
+			ShowAnnouncementMessage("STRIKE!", "strike");
+	}
+	
+	private void OnSpare()
+	{
+		ShowAnnouncementMessage("SPARE!", "spare");
+	}
+	
+	// Oddball special announcements
+	private void OnDouble()
+	{
+		ShowAnnouncementMessage("DOUBLE!", "strike");
+	}
+	
+	private void OnTurkey()
+	{
+		ShowAnnouncementMessage("TURKEY!", "turkey");
+	}
+	
+	private void OnHambone()
+	{
+		ShowAnnouncementMessage("HAMBONE!", "legendary");
+	}
+	
+	private void OnYahtzee()
+	{
+		ShowAnnouncementMessage("YAHTZEE!", "legendary");
+	}
+	
+	private void OnSixPack()
+	{
+		ShowAnnouncementMessage("SIX-PACK!", "legendary");
+	}
+	
+	private void OnPerfectGame()
+	{
+		ShowAnnouncementMessage("PERFECT 300!", "perfect");
+	}
+	
+	private void OnSplitPickup()
+	{
+		ShowAnnouncementMessage("SPLIT PICKUP!", "spare");
+	}
+	
+	private void CheckForBowlingEvents()
+	{
+		if (_gameManager == null) return;
+		
+		var currentState = _gameManager.CurrentState;
+		var currentPins = _gameManager.PinsRemaining;
+		var currentRoll = _gameManager.CurrentRoll;
+		var currentFrame = _gameManager.CurrentFrame;
+		
+		// Reset tracking when a new roll starts (WaitingForThrow state)
+		if (currentState == BowlingGameManager.GameState.WaitingForThrow)
+		{
+			if (_lastState != BowlingGameManager.GameState.WaitingForThrow)
+			{
+				// New roll starting
+				_pinsAtStartOfRoll = currentPins;
+				_rollProcessed = false;
+				Log.Info($"HUD: Ready for throw. Pins: {_pinsAtStartOfRoll}, Roll: {currentRoll}, Frame: {currentFrame}");
+			}
+		}
+		
+		// Track starting pins when ball is thrown
+		if (currentState == BowlingGameManager.GameState.BallInPlay)
+		{
+			if (_lastState == BowlingGameManager.GameState.WaitingForThrow)
+			{
+				_pinsAtStartOfRoll = _lastPinsRemaining;
+				_rollProcessed = false;
+				Log.Info($"HUD: Ball in play! Started with {_pinsAtStartOfRoll} pins");
+			}
+		}
+		
+		// Detect when pins have been counted (transition from Settling to ResettingPins or WaitingForThrow)
+		// Strike/Spare are handled by events, but we still show "Nice!" for good hits
+		if (_lastState == BowlingGameManager.GameState.Settling && 
+			(currentState == BowlingGameManager.GameState.ResettingPins || currentState == BowlingGameManager.GameState.WaitingForThrow) &&
+			!_rollProcessed)
+		{
+			int pinsKnockedThisRoll = _gameManager.PinsKnockedThisRoll;
+			Log.Info($"HUD: Settling complete! Knocked: {pinsKnockedThisRoll}, Remaining: {currentPins}");
+			
+			_rollProcessed = true;
+			
+			// Only show "Nice/Great" for non-strike/spare hits (those are handled by events)
+			if (currentPins > 0) // Not a strike or spare
+			{
+				if (pinsKnockedThisRoll >= 8)
+				{
+					ShowAnnouncementMessage($"GREAT! {pinsKnockedThisRoll}", "nice");
+				}
+				else if (pinsKnockedThisRoll >= 5)
+				{
+					ShowAnnouncementMessage($"NICE! {pinsKnockedThisRoll}", "nice");
+				}
+			}
+		}
+		
+		// Track state for next frame
+		_lastState = currentState;
+		_lastPinsRemaining = currentPins;
+		_lastRoll = currentRoll;
+		_lastFrame = currentFrame;
+	}
+	
+	private void ShowAnnouncementMessage(string text, string cssClass)
+	{
+		_announcementText = text;
+		_announcementClass = cssClass;
+		_announcementTime = 0;
+		Log.Info($"HUD: Showing announcement: {text}");
+	}
+
+	// Update every frame for animations
+	protected override int BuildHash()
+	{
+		// Always rebuild every frame for smooth animations (marquee + fade)
+		return Time.Now.GetHashCode();
+	}
+}

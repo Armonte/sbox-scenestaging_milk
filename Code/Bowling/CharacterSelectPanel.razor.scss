@@ -1,0 +1,59 @@
+CharacterSelectPanel {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.8);
+	justify-content: center;
+	align-items: center;
+	pointer-events: all;
+	
+	.character-select-container {
+		background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+		border: 2px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 40px;
+		flex-direction: column;
+		align-items: center;
+		gap: 30px;
+		
+		.title {
+			color: #fff;
+			font-size: 36px;
+			font-family: 'Bebas Neue', 'Impact', sans-serif;
+			letter-spacing: 4px;
+		}
+		
+		.characters {
+			flex-direction: row;
+			gap: 20px;
+			
+			.character {
+				width: 150px;
+				height: 180px;
+				background: rgba(255, 255, 255, 0.1);
+				border: 2px solid rgba(255, 255, 255, 0.2);
+				border-radius: 8px;
+				justify-content: flex-end;
+				align-items: center;
+				padding-bottom: 15px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				
+				&:hover {
+					background: rgba(255, 255, 255, 0.2);
+					border-color: #ffd700;
+					transform: scale(1.05);
+				}
+				
+				.name {
+					color: #fff;
+					font-size: 18px;
+					font-family: 'Poppins', sans-serif;
+				}
+			}
+		}
+	}
+}
+

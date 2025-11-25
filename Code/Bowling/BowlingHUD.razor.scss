@@ -1,0 +1,287 @@
+BowlingHUD {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+	font-family: Poppins;
+
+	// Player Info - top left (below marquee)
+	.player-info {
+		position: absolute;
+		top: 30px;
+		left: 40px;
+		
+		.player-name {
+			color: white;
+			font-size: 28px;
+			font-weight: bold;
+			letter-spacing: 2px;
+		}
+	}
+
+	// Score Panel - top right (below marquee)
+	.score-panel {
+		position: absolute;
+		top: 30px;
+		right: 40px;
+		background-color: rgba(0, 0, 0, 0.7);
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-radius: 8px;
+		padding: 16px 24px;
+		flex-direction: row;
+		gap: 32px;
+		backdrop-filter: blur(10px);
+
+		.frame-info, .roll-info, .total-score, .pins-info {
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+
+			.label {
+				color: rgba(255, 255, 255, 0.7);
+				font-size: 14px;
+				font-weight: bold;
+				letter-spacing: 2px;
+			}
+
+			.value {
+				color: white;
+				font-size: 32px;
+				font-weight: bold;
+			}
+		}
+
+		.total-score {
+			.value {
+				color: #ffd700;
+				font-size: 42px;
+			}
+		}
+
+		.pins-info {
+			.value {
+				color: #4ecdc4;
+			}
+		}
+	}
+
+	// Charge Meter - V-shaped wedge, right side of screen
+	.charge-container {
+		position: absolute;
+		bottom: 80px;
+		right: 30%;
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+
+		.charge-percent {
+			color: white;
+			font-size: 28px;
+			font-weight: bold;
+			letter-spacing: 2px;
+		}
+
+		.charge-label {
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 14px;
+			font-weight: bold;
+			letter-spacing: 4px;
+		}
+
+		// V-shaped bar using stacked segments
+		.charge-bar-v {
+			flex-direction: column;
+			align-items: center;
+			gap: 3px;
+			
+			.charge-segment {
+				background-color: rgba(40, 40, 40, 0.9);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				
+				&.filled {
+					border-color: rgba(255, 255, 255, 0.4);
+				}
+			}
+			
+			// Segments get wider as you go down (bottom = more power) - wider version
+			.seg-1 { width: 30px; height: 16px; }
+			.seg-2 { width: 40px; height: 16px; }
+			.seg-3 { width: 50px; height: 16px; }
+			.seg-4 { width: 60px; height: 16px; }
+			.seg-5 { width: 70px; height: 16px; }
+			.seg-6 { width: 80px; height: 16px; }
+			.seg-7 { width: 90px; height: 16px; }
+			.seg-8 { width: 100px; height: 16px; }
+			.seg-9 { width: 110px; height: 16px; }
+			.seg-10 { width: 120px; height: 16px; }
+		}
+	}
+
+	// Prototype Marquee - top of screen
+	.prototype-marquee {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 18px;
+		background-color: rgba(180, 0, 0, 0.6);
+		overflow: hidden;
+		
+		.marquee-track {
+			position: absolute;
+			top: 0;
+			left: 0;
+			white-space: nowrap;
+			
+			.marquee-text {
+				display: inline;
+				color: rgba(255, 255, 255, 0.8);
+				font-size: 13px;
+				font-weight: bold;
+				letter-spacing: 6px;
+				padding: 2px 0;
+			}
+		}
+	}
+
+	// Announcement container - centers the popup
+	.announcement-container {
+		position: absolute;
+		top: 35%;
+		left: 0;
+		right: 0;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		pointer-events: none;
+	}
+
+	// Big Announcement (Strike/Spare/Gutter)
+	.announcement {
+		padding: 28px 80px;
+		font-size: 72px;
+		font-weight: bold;
+		letter-spacing: 8px;
+		color: white;
+		white-space: nowrap;
+		background-color: rgba(0, 0, 0, 0.85);
+		border-radius: 16px;
+		text-align: center;
+
+		&.strike {
+			color: #ffd700;
+			font-size: 96px;
+			border: 4px solid #ffd700;
+		}
+
+		&.spare {
+			color: #4ecdc4;
+			font-size: 84px;
+			border: 4px solid #4ecdc4;
+		}
+
+		&.gutter {
+			color: #ff4444;
+			font-size: 64px;
+			border: 4px solid #ff4444;
+		}
+		
+		// Turkey - 3 strikes
+		&.turkey {
+			color: #ff8c00;
+			font-size: 96px;
+			border: 4px solid #ff8c00;
+			background-color: rgba(40, 20, 0, 0.9);
+		}
+		
+		// Legendary achievements (Hambone, Yahtzee, Six-Pack)
+		&.legendary {
+			color: #ff00ff;
+			font-size: 96px;
+			border: 4px solid #ff00ff;
+			background-color: rgba(40, 0, 40, 0.9);
+		}
+		
+		// Perfect Game - 300
+		&.perfect {
+			color: #00ffff;
+			font-size: 110px;
+			border: 6px solid #00ffff;
+			background-color: rgba(0, 30, 40, 0.95);
+			letter-spacing: 12px;
+		}
+
+		&.nice {
+			color: #44ff44;
+			font-size: 56px;
+			border: 4px solid #44ff44;
+		}
+	}
+
+	// Game State Side Indicator (Settling/Resetting) - small unobtrusive
+	.game-state-side {
+		position: absolute;
+		bottom: 40px;
+		left: 40px;
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 14px;
+		font-weight: bold;
+		letter-spacing: 2px;
+		padding: 8px 16px;
+		background-color: rgba(0, 0, 0, 0.5);
+		border-radius: 6px;
+		border-left: 3px solid #f7931e;
+
+		&.settling {
+			border-left-color: #f7931e;
+		}
+
+		&.resetting {
+			border-left-color: #4ecdc4;
+		}
+	}
+
+	// Game Over Panel - center screen
+	.game-over-panel {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		margin-left: -200px;
+		margin-top: -150px;
+		width: 400px;
+		background-color: rgba(0, 0, 0, 0.9);
+		border: 3px solid #ffd700;
+		border-radius: 16px;
+		padding: 48px 64px;
+		flex-direction: column;
+		align-items: center;
+		gap: 24px;
+		backdrop-filter: blur(20px);
+		pointer-events: all;
+
+		.game-over-title {
+			color: #ffd700;
+			font-size: 64px;
+			font-weight: bold;
+			letter-spacing: 8px;
+			text-align: center;
+		}
+
+		.final-score {
+			color: white;
+			font-size: 42px;
+			font-weight: bold;
+			text-align: center;
+		}
+
+		.restart-hint {
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 20px;
+			letter-spacing: 2px;
+			margin-top: 16px;
+			text-align: center;
+		}
+	}
+}

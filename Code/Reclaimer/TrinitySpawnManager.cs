@@ -212,14 +212,6 @@ namespace Reclaimer
 			
 			Log.Info($"Player spawned: {player.Name} at {player.WorldPosition}");
 			
-			var clothing = new ClothingContainer();
-			clothing.Deserialize(channel.GetUserData("avatar"));
-			
-			if (player.Components.TryGet<SkinnedModelRenderer>(out var body, FindMode.EverythingInSelfAndDescendants))
-			{
-				clothing.Apply(body);
-			}
-			
 			var nameTag = player.Components.Get<NameTagPanel>(FindMode.EverythingInSelfAndDescendants);
 			if (nameTag != null && nameTag.IsValid())
 			{

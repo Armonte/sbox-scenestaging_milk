@@ -1,257 +1,337 @@
 using Sandbox;
 
 /// <summary>
-/// Player controller for bowling. Handles ball throwing mechanics.
+/// Player controller for bowling. Handles ball throwing mechanics with charge system.
 /// Add this component to your player GameObject alongside PlayerController.
 /// </summary>
 public sealed class BowlingPlayerController : Component
 {
 	[Property] public GameObject BallPrefab { get; set; }
 	[Property] public GameObject BallHoldPoint { get; set; } // Child GameObject where ball will be parented when held
-	[Property] public float ThrowChargeTime { get; set; } = 2.0f; // Max charge time in seconds
-	[Property] public float MinThrowForce { get; set; } = 500.0f;
-	[Property] public float MaxThrowForce { get; set; } = 2000.0f;
-	
+	[Property] public string HandBoneName { get; set; } = "hand_r"; // Bone name to use if BallHoldPoint not set
+	[Property] public Vector3 HoldOffset { get; set; } = new Vector3(10, 0, 0); // Local offset from hold point (forward, right, up)
+	[Property] public Angles HoldRotation { get; set; } = new Angles(0, 0, 0); // Local rotation offset
+	[Property] public float ThrowChargeTime { get; set; } = 1.5f; // Max charge time in seconds
+	[Property] public float MinThrowForce { get; set; } = 400.0f;
+	[Property] public float MaxThrowForce { get; set; } = 1800.0f;
+
+	// Exposed state for UI and game manager
 	[Property] public GameObject CurrentBall { get; private set; }
 	[Property] public bool HasBall { get; private set; } = false;
-	
+	[Property] public bool IsCharging { get; private set; } = false;
+	[Property] public float ChargePercent { get; private set; } = 0f;
+
 	private PlayerController _playerController;
 	private Rigidbody _ballRigidbody;
 	private TimeSince _chargeStartTime;
-	private bool _isCharging = false;
 	private bool _wasAttack1Down = false;
-	
+	private BowlingGameManager _gameManager;
+	private SkinnedModelRenderer _bodyRenderer;
+	private GameObject _handBone;
+
 	protected override void OnStart()
 	{
 		base.OnStart();
 
-		_playerController = Components.Get<PlayerController>( FindMode.InAncestors );
+		_playerController = Components.Get<PlayerController>(FindMode.InAncestors);
+		_gameManager = Scene.GetAllComponents<BowlingGameManager>().FirstOrDefault();
+
+		// Find the SkinnedModelRenderer to get bone objects
+		_bodyRenderer = Components.Get<SkinnedModelRenderer>(FindMode.EverythingInSelfAndDescendants);
+		
+		// Tag the player for collision filtering (ball ignores player)
+		Tags.Add("player");
+		
+		// If no explicit hold point, try to find the hand bone
+		if (!BallHoldPoint.IsValid() && _bodyRenderer.IsValid())
+		{
+			FindHandBone();
+		}
 
 		// Spawn initial ball after a delay to ensure player controller is fully initialized
-		Invoke( 0.5f, SpawnBall );
+		Invoke(0.5f, SpawnBall);
 	}
-	
+
+	private void FindHandBone()
+	{
+		// Find hand bone using GetBoneObject (requires CreateBoneObjects = true, NOT CreateAttachments)
+		// Avoid IK and attachment bones - we want the actual skeletal hand bone
+		GameObject bestMatch = null;
+		
+		for (int i = 0; i < _bodyRenderer.Model.BoneCount; i++)
+		{
+			var bone = _bodyRenderer.GetBoneObject(i);
+			if (!bone.IsValid())
+				continue;
+				
+			var boneName = bone.Name.ToLowerInvariant();
+			
+			// Skip IK bones and attachment bones
+			if (boneName.Contains("ik") || boneName.Contains("attach") || boneName.Contains("target"))
+				continue;
+			
+			if (boneName.Contains(HandBoneName.ToLowerInvariant()))
+			{
+				bestMatch = bone;
+				// Prefer exact match
+				if (boneName == HandBoneName.ToLowerInvariant() || boneName == "hand_r" || boneName == "hand_l")
+				{
+					_handBone = bone;
+					Log.Info($"Found hand bone (exact): {bone.Name}");
+					return;
+				}
+			}
+		}
+		
+		// Use best partial match if no exact match
+		if (bestMatch.IsValid())
+		{
+			_handBone = bestMatch;
+			Log.Info($"Found hand bone (partial): {bestMatch.Name}");
+			return;
+		}
+		
+		// Log all bones to help debug
+		Log.Warning($"Could not find bone containing '{HandBoneName}'. Available bones:");
+		for (int i = 0; i < _bodyRenderer.Model.BoneCount; i++)
+		{
+			var bone = _bodyRenderer.GetBoneObject(i);
+			if (bone.IsValid())
+				Log.Info($"  Bone {i}: {bone.Name}");
+		}
+	}
+
 	protected override void OnUpdate()
 	{
-		if ( IsProxy )
+		if (IsProxy)
 			return;
-		
-		var attack1Down = Input.Down( "attack1" );
-		
+
+		var attack1Down = Input.Down("attack1");
+
 		// Handle ball throwing input
-		if ( attack1Down && !_wasAttack1Down && HasBall && CurrentBall.IsValid() )
+		if (attack1Down && !_wasAttack1Down && HasBall && CurrentBall.IsValid())
 		{
 			StartCharging();
 		}
-		
-		if ( attack1Down && _isCharging )
+
+		if (attack1Down && IsCharging)
 		{
 			UpdateCharging();
 		}
-		
+
 		// Detect button release
-		if ( !attack1Down && _wasAttack1Down && _isCharging )
+		if (!attack1Down && _wasAttack1Down && IsCharging)
 		{
 			ThrowBall();
 		}
-		
+
 		_wasAttack1Down = attack1Down;
-		
-		// Reset ball (for testing - remove in production or bind to different key)
-		if ( Input.Pressed( "reload" ) )
+
+		// Restart game (for testing)
+		if (Input.Pressed("reload") && _gameManager.IsValid())
 		{
-			ResetBall();
+			if (_gameManager.CurrentState == BowlingGameManager.GameState.GameOver)
+			{
+				_gameManager.RestartGame();
+			}
 		}
 	}
-	
-	
-	private void StartCharging()
+
+	/// <summary>
+	/// Update ball position in PreRender for smooth following
+	/// </summary>
+	protected override void OnPreRender()
 	{
-		_isCharging = true;
-		_chargeStartTime = 0;
-	}
-	
-	private void UpdateCharging()
-	{
-		// Visual feedback for charging could go here
-		// For now, we'll just track the charge time
-	}
-	
-	private void ThrowBall()
-	{
-		if ( !HasBall || !CurrentBall.IsValid() )
+		if (!HasBall || !CurrentBall.IsValid())
 			return;
 
-		_isCharging = false;
+		// Get the hold position - prefer explicit hold point, fallback to hand bone
+		var holdPoint = BallHoldPoint.IsValid() ? BallHoldPoint : _handBone;
+		if (!holdPoint.IsValid())
+			return;
+
+		// Calculate final position with offset
+		var finalPosition = holdPoint.WorldPosition + holdPoint.WorldRotation * HoldOffset;
+		var finalRotation = holdPoint.WorldRotation * HoldRotation.ToRotation();
+
+		CurrentBall.WorldPosition = finalPosition;
+		CurrentBall.WorldRotation = finalRotation;
+	}
+
+	private void StartCharging()
+	{
+		IsCharging = true;
+		_chargeStartTime = 0;
+		ChargePercent = 0f;
+	}
+
+	private void UpdateCharging()
+	{
+		// Calculate charge (0 to 1)
+		var chargeTime = (float)_chargeStartTime;
+		ChargePercent = (chargeTime / ThrowChargeTime).Clamp(0f, 1f);
+	}
+
+	private void ThrowBall()
+	{
+		if (!HasBall || !CurrentBall.IsValid())
+			return;
+
+		IsCharging = false;
 
 		// Store the world position before unparenting
 		var throwPosition = CurrentBall.WorldPosition;
 		var throwRotation = CurrentBall.WorldRotation;
 
-		// Unparent the ball from the hold point
-		CurrentBall.SetParent( null );
+		// Remove held tag
+		CurrentBall.Tags.Remove("held_ball");
 
-		// Restore world position (unparenting can sometimes mess with position)
+		// Unparent the ball (keep world transform)
+		CurrentBall.SetParent(null, true);
+
+		// Restore world position just to be safe
 		CurrentBall.WorldPosition = throwPosition;
 		CurrentBall.WorldRotation = throwRotation;
-
-		// Calculate charge (0 to 1)
-		var chargeTime = _chargeStartTime;
-		var charge = (chargeTime / ThrowChargeTime).Clamp( 0, 1 );
 
 		// Get throw direction
 		var throwDirection = GetThrowDirection();
 
 		// Get the ball component and throw it
 		var ball = CurrentBall.Components.Get<BowlingBall>();
-		if ( ball.IsValid() )
+		if (ball.IsValid())
 		{
-			// Calculate force multiplier based on charge
-			var forceMultiplier = MinThrowForce + (MaxThrowForce - MinThrowForce) * charge;
-			forceMultiplier /= ball.ThrowForce; // Normalize to ball's throw force
+			// Calculate force based on charge
+			var force = MinThrowForce + (MaxThrowForce - MinThrowForce) * ChargePercent;
+			var forceMultiplier = force / ball.ThrowForce;
 
-		// Re-fetch rigidbody reference after unparenting (in case it changed)
-		_ballRigidbody = CurrentBall.Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+			// Re-enable ALL colliders first
+			var colliders = CurrentBall.Components.GetAll<Collider>(FindMode.EverythingInSelfAndDescendants);
+			foreach (var collider in colliders)
+			{
+				collider.Enabled = true;
+			}
 
-		// Re-enable colliders for physics interaction
-		var colliders = CurrentBall.Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants );
-		foreach ( var collider in colliders )
-		{
-			collider.Enabled = true;
-			// Ensure collider is not a trigger
-			collider.IsTrigger = false;
-		}
+			// Re-fetch and re-enable rigidbody
+			_ballRigidbody = CurrentBall.Components.Get<Rigidbody>(FindMode.EverythingInSelfAndDescendants);
+			if (_ballRigidbody.IsValid())
+			{
+				_ballRigidbody.Enabled = true;
+			}
 
-		// Enable physics and throw (ball.Throw will handle the rest)
-		if ( _ballRigidbody.IsValid() )
-		{
-			_ballRigidbody.MotionEnabled = true;
-			_ballRigidbody.Gravity = true;
-			_ballRigidbody.Velocity = Vector3.Zero;
-			_ballRigidbody.AngularVelocity = Vector3.Zero;
-			_ballRigidbody.Sleeping = false;
-		}
-
-		ball.Throw( throwDirection, forceMultiplier );
+			ball.Throw(throwDirection, forceMultiplier);
 			HasBall = false;
+			ChargePercent = 0f;
 
-			Log.Info( $"Ball thrown from {throwPosition} dir {throwDirection} charge: {charge:F2}" );
+			// Notify game manager
+			if (_gameManager.IsValid())
+			{
+				_gameManager.OnBallThrown(ball, throwPosition);
+			}
+
+			Log.Info($"Ball thrown! Dir: {throwDirection}, Charge: {ChargePercent:P0}, Force: {force:F0}");
 		}
 	}
-	
+
 	private Vector3 GetThrowDirection()
 	{
 		// Try to get direction from the main camera first
 		var camera = Scene.Camera;
-		if ( camera.IsValid() )
+		if (camera.IsValid())
 		{
 			var forward = camera.WorldRotation.Forward;
-			Log.Info( $"Throw direction from Camera: {forward}" );
 			return forward.Normal;
 		}
 
 		// Fallback to player controller eye angles
-		if ( _playerController.IsValid() )
+		if (_playerController.IsValid())
 		{
 			var eyeAngles = _playerController.EyeAngles;
 			var forward = eyeAngles.ToRotation().Forward;
-			Log.Info( $"Throw direction from EyeAngles: {eyeAngles}, Forward: {forward}" );
 			return forward.Normal;
 		}
 
-		Log.Warning( "No valid camera or PlayerController, using fallback throw direction" );
+		Log.Warning("No valid camera or PlayerController, using fallback throw direction");
 		return WorldRotation.Forward;
 	}
-	
+
+	/// <summary>
+	/// Give the player a new ball (called by game manager)
+	/// </summary>
+	public void GiveBall()
+	{
+		if (HasBall && CurrentBall.IsValid())
+		{
+			// Already have a ball
+			return;
+		}
+
+		SpawnBall();
+	}
+
 	private void SpawnBall()
 	{
-		if ( !BallPrefab.IsValid() )
+		if (!BallPrefab.IsValid())
 		{
-			Log.Warning( "BallPrefab not set in BowlingPlayerController!" );
+			Log.Warning("BallPrefab not set in BowlingPlayerController!");
 			return;
 		}
 
-		if ( !BallHoldPoint.IsValid() )
+		// Get hold point - prefer explicit, fallback to hand bone
+		var holdPoint = BallHoldPoint.IsValid() ? BallHoldPoint : _handBone;
+		if (!holdPoint.IsValid())
 		{
-			Log.Warning( "BallHoldPoint not set in BowlingPlayerController! Create a child GameObject on your player to hold the ball." );
+			Log.Warning("No valid hold point! Set BallHoldPoint or ensure CreateBoneObjects is enabled on SkinnedModelRenderer.");
 			return;
 		}
 
-		// Spawn the ball at the hold point's position
-		CurrentBall = BallPrefab.Clone( BallHoldPoint.WorldPosition, BallHoldPoint.WorldRotation );
+		// Clean up old ball if exists
+		if (CurrentBall.IsValid())
+		{
+			CurrentBall.Destroy();
+		}
 
-		// Disable colliders BEFORE enabling the ball to prevent initial collision
-		var colliders = CurrentBall.Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants );
-		foreach ( var collider in colliders )
+		// Spawn the ball at the hold point's position with offset
+		var spawnPosition = holdPoint.WorldPosition + holdPoint.WorldRotation * HoldOffset;
+		var spawnRotation = holdPoint.WorldRotation * HoldRotation.ToRotation();
+		CurrentBall = BallPrefab.Clone(spawnPosition, spawnRotation);
+
+		// Tag the ball as held
+		CurrentBall.Tags.Add("held_ball");
+
+		// IMPORTANT: Disable ALL physics components BEFORE parenting to prevent any collision
+		// Disable Rigidbody
+		_ballRigidbody = CurrentBall.Components.Get<Rigidbody>(FindMode.EverythingInSelfAndDescendants);
+		if (_ballRigidbody.IsValid())
+		{
+			_ballRigidbody.Enabled = false;
+		}
+		else
+		{
+			Log.Warning("Ball prefab doesn't have a Rigidbody component!");
+		}
+
+		// Disable ALL colliders - CharacterController can still collide with enabled colliders
+		var colliders = CurrentBall.Components.GetAll<Collider>(FindMode.EverythingInSelfAndDescendants);
+		foreach (var collider in colliders)
 		{
 			collider.Enabled = false;
 		}
 
-		// Get the rigidbody and disable physics while held (search in children too)
-		_ballRigidbody = CurrentBall.Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( _ballRigidbody.IsValid() )
-		{
-			_ballRigidbody.MotionEnabled = false; // Disable physics while parented
-		}
-		else
-		{
-			Log.Warning( "Ball prefab doesn't have a Rigidbody component!" );
-		}
+		// Now parent it
+		CurrentBall.SetParent(GameObject, true);
 
-		// Now enable the ball and parent it
 		CurrentBall.Enabled = true;
 		HasBall = true;
-
-		// Parent the ball to the hold point so it moves with the player
-		CurrentBall.SetParent( BallHoldPoint );
-		CurrentBall.LocalPosition = Vector3.Zero;
-		CurrentBall.LocalRotation = Rotation.Identity;
+		IsCharging = false;
+		ChargePercent = 0f;
 
 		// Verify ball component exists
 		var ball = CurrentBall.Components.Get<BowlingBall>();
-		if ( !ball.IsValid() )
+		if (!ball.IsValid())
 		{
-			Log.Warning( "Ball prefab doesn't have a BowlingBall component!" );
+			Log.Warning("Ball prefab doesn't have a BowlingBall component!");
 		}
 
-		Log.Info( "Ball spawned and parented to hold point" );
-	}
-	
-	private void ResetBall()
-	{
-		if ( CurrentBall.IsValid() )
-		{
-			var ball = CurrentBall.Components.Get<BowlingBall>();
-			if ( ball.IsValid() && BallHoldPoint.IsValid() )
-			{
-				// Reset ball state
-				ball.Reset( BallHoldPoint.WorldPosition, BallHoldPoint.WorldRotation );
-				HasBall = true;
-
-				// Parent back to hold point
-				CurrentBall.SetParent( BallHoldPoint );
-				CurrentBall.LocalPosition = Vector3.Zero;
-				CurrentBall.LocalRotation = Rotation.Identity;
-
-				// Disable physics while held
-				if ( _ballRigidbody.IsValid() )
-				{
-					_ballRigidbody.MotionEnabled = false;
-					_ballRigidbody.Velocity = Vector3.Zero;
-					_ballRigidbody.AngularVelocity = Vector3.Zero;
-				}
-
-				// Disable colliders while held to prevent collision with player
-				var colliders = CurrentBall.Components.GetAll<Collider>( FindMode.EnabledInSelfAndDescendants );
-				foreach ( var collider in colliders )
-				{
-					collider.Enabled = false;
-				}
-			}
-		}
-		else
-		{
-			SpawnBall();
-		}
+		Log.Info("Ball spawned and ready!");
 	}
 }

@@ -1,0 +1,39 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+
+<root>
+	<div class="character-select-container">
+		<div class="title">Select Your Character</div>
+		<div class="characters">
+			<div class="character" @onclick=@(() => SelectCharacter(1))>
+				<div class="name">Bowler 1</div>
+			</div>
+			<div class="character" @onclick=@(() => SelectCharacter(2))>
+				<div class="name">Bowler 2</div>
+			</div>
+			<div class="character" @onclick=@(() => SelectCharacter(3))>
+				<div class="name">Bowler 3</div>
+			</div>
+		</div>
+	</div>
+</root>
+
+@code
+{
+	private CharacterSelectionUI _selector;
+	
+	public void SetSelector(CharacterSelectionUI selector)
+	{
+		_selector = selector;
+	}
+	
+	void SelectCharacter(int characterId)
+	{
+		Log.Info($"Character {characterId} selected");
+		_selector?.RequestCharacterSelection(characterId);
+	}
+	
+	protected override int BuildHash() => 0;
+}
+
