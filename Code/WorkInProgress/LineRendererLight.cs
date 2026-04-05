@@ -4,7 +4,7 @@ namespace Sandbox;
 public class LineRendererLight : Component, Component.ExecuteInEditor
 {
     LineRenderer Renderer;
-    SceneLight so;
+    ScenePointLight so;
 
     [Property] public float Brightness { get; set; } = 1.0f;
     
@@ -26,7 +26,7 @@ public class LineRendererLight : Component, Component.ExecuteInEditor
         if (so.IsValid())
             so.Delete();
             
-        so = new SceneLight(Renderer.Scene.SceneWorld, Vector3.Zero, 100, Color.Red);
+        so = new ScenePointLight(Renderer.Scene.SceneWorld, Vector3.Zero, 100, Color.Red);
     }
 
 	protected override void OnDisabled()

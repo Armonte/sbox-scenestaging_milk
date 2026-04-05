@@ -1,0 +1,103 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root class="roguelite-hud">
+
+    @* Crosshair *@
+    <div class="crosshair">+</div>
+
+    @* Health Bar *@
+    <div class="health-section">
+        <div class="health-bar">
+            <div class="health-fill" style="width: @GetHealthPercent()%"></div>
+        </div>
+        <div class="health-text">@GetHealthText()</div>
+    </div>
+
+    @* Combo indicator *@
+    @if (GetComboStep() > 0)
+    {
+        <div class="combo-indicator">
+            <span class="combo-count">@GetComboStep()</span>
+            <span class="combo-label">HIT</span>
+        </div>
+    }
+
+    @* Speed counter *@
+    <div class="speed-counter">@GetSpeed() u/s</div>
+
+    @* Damage flash *@
+    @if (ShowDamageFlash())
+    {
+        <div class="damage-flash"></div>
+    }
+
+</root>
+
+@code {
+
+    private float _lastHealth = -1f;
+    private TimeSince _timeSinceDamage = 10f;
+    private bool _showFlash;
+
+    RoguelitePlayer GetPlayer()
+    {
+        return Scene?.GetAllComponents<RoguelitePlayer>()
+            ?.Where( p => !p.IsProxy )
+            ?.FirstOrDefault();
+    }
+
+    string GetHealthText()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return "0 / 0";
+        return $"{player.Health.Current:F0} / {player.Health.MaxHealth:F0}";
+    }
+
+    float GetHealthPercent()
+    {
+        var player = GetPlayer();
+        if ( player is null || player.Health.MaxHealth <= 0 ) return 0;
+        return Math.Clamp( (player.Health.Current / player.Health.MaxHealth) * 100f, 0f, 100f );
+    }
+
+    int GetComboStep()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return 0;
+        var sword = player.ActiveWeapon as SwordWeapon;
+        return sword?.CurrentComboStep ?? 0;
+    }
+
+    string GetSpeed()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return "0";
+        var cc = player.Components.Get<CharacterController>();
+        if ( cc is null ) return "0";
+        return cc.Velocity.WithZ( 0 ).Length.ToString( "F0" );
+    }
+
+    bool ShowDamageFlash() => _showFlash;
+
+    protected override void OnUpdate()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return;
+
+        if ( _lastHealth >= 0 && player.Health.Current < _lastHealth )
+            _timeSinceDamage = 0;
+
+        _lastHealth = player.Health.Current;
+        _showFlash = _timeSinceDamage < 0.3f;
+    }
+
+    protected override int BuildHash()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return 0;
+        return HashCode.Combine( player.Health.Current, player.Health.MaxHealth, player.IsAlive, GetComboStep(), _showFlash, GetSpeed() );
+    }
+}

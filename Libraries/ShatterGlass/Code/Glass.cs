@@ -99,14 +99,14 @@ public sealed class Glass : Component, Component.ExecuteInEditor, Component.IDam
 	private readonly Dictionary<PhysicsShape, Shard> Shards = new();
 	private readonly List<PhysicsShape> ShardsToRemove = new();
 
-	[Property, MakeDirty] public Material Material { get; set; }
-	[Property, MakeDirty] public Surface Surface { get; set; }
-	[Property, MakeDirty] public float Thickness { get; set; } = 1;
-	[Property, MakeDirty] public Vector3 TextureAxisU { get; set; } = Vector3.Forward;
-	[Property, MakeDirty] public Vector3 TextureAxisV { get; set; } = Vector3.Right;
-	[Property, MakeDirty] public Vector2 TextureScale { get; set; } = 1;
-	[Property, MakeDirty] public Vector2 TextureOffset { get; set; } = 0;
-	[Property, MakeDirty] public Vector2 TextureSize { get; set; } = 512;
+	[Property] public Material Material { get; set { if ( field == value ) return; field = value; RefreshGlass(); } }
+	[Property] public Surface Surface { get; set { if ( field == value ) return; field = value; RefreshGlass(); } }
+	[Property] public float Thickness { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = 1;
+	[Property] public Vector3 TextureAxisU { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = Vector3.Forward;
+	[Property] public Vector3 TextureAxisV { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = Vector3.Right;
+	[Property] public Vector2 TextureScale { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = 1;
+	[Property] public Vector2 TextureOffset { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = 0;
+	[Property] public Vector2 TextureSize { get; set { if ( field == value ) return; field = value; RefreshGlass(); } } = 512;
 	[Property] public List<Vector2> Points { get; set; }
 	[Property] public float ShardLifeTime { get; set; } = 1.0f;
 
@@ -173,10 +173,8 @@ public sealed class Glass : Component, Component.ExecuteInEditor, Component.IDam
 		DestroyShards();
 	}
 
-	protected override void OnDirty()
+	private void RefreshGlass()
 	{
-		base.OnDirty();
-
 		DestroyShards();
 		CreatePrimaryShard();
 	}
@@ -266,7 +264,7 @@ public sealed class Glass : Component, Component.ExecuteInEditor, Component.IDam
 
 		var model = CreateModel( points );
 		var sceneObject = new SceneObject( Scene.SceneWorld, model, transform );
-		sceneObject.SetComponentSource( this );
+				sceneObject.SetComponentSource( this );
 		sceneObject.Tags.SetFrom( GameObject.Tags );
 		sceneObject.Batchable = false;
 

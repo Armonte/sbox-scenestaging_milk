@@ -20,6 +20,7 @@ public sealed class NetworkTest : Component
 			var offset = new Vector3( 0, 0, 40 );
 
 			var pc = Components.Get<PlayerController>();
+			if ( !pc.IsValid() ) return;
 
 			Carrying.WorldPosition = HoldRelative.WorldPosition + HoldRelative.Parent.WorldRotation * offset;
 			Carrying.WorldRotation = pc.Body.WorldRotation;
@@ -28,6 +29,9 @@ public sealed class NetworkTest : Component
 
 	void UpdatePickup()
 	{
+		var pc = Components.Get<PlayerController>();
+		if ( !pc.IsValid() ) return;
+
 		if ( Carrying.IsValid() )
 		{
 			if ( Carrying.IsProxy )
@@ -38,17 +42,12 @@ public sealed class NetworkTest : Component
 
 			var offset = new Vector3( 0, 0, 40 );
 
-			var pc = Components.Get<PlayerController>();
-
 			Carrying.WorldPosition = HoldRelative.WorldPosition + HoldRelative.Parent.WorldRotation * offset;
 			Carrying.WorldRotation = pc.Body.WorldRotation;
-			//Carrying.Components.Get<Rigidbody>().Velocity = 0;
-			//Carrying.Components.Get<Rigidbody>().AngularVelocity = 0;
 		}
 
 		if ( Input.Pressed( "use" ) )
 		{
-			var pc = Components.Get<PlayerController>();
 			var lookDir = pc.EyeAngles.ToRotation();
 
 			if ( Carrying.IsValid() )
@@ -64,13 +63,12 @@ public sealed class NetworkTest : Component
 				return;
 			}
 
-			TryPickup();
+			TryPickup( pc );
 		}
 	}
 
-	void TryPickup()
+	void TryPickup( PlayerController pc )
 	{
-		var pc = Components.Get<PlayerController>();
 		var lookDir = pc.EyeAngles.ToRotation();
 		var eyePos = WorldPosition + Vector3.Up * 60;
 

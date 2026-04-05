@@ -3,7 +3,7 @@ using Sandbox.Citizen;
 using System.Drawing;
 using System.Runtime;
 
-public class PlayerController : Component
+public class ExamplePlayerController : Component
 {
 	[Property] public Vector3 Gravity { get; set; } = new Vector3( 0, 0, 800 );
 

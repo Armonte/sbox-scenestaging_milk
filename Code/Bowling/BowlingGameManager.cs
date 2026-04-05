@@ -29,8 +29,10 @@ public sealed class BowlingGameManager : Component
 
 	[Property, Group("Prefabs")] public GameObject PinPrefab { get; set; }
 	
-	[Property, Group("Spawn Points")] 
-	[Description("Empty GameObject marking where the front pin (pin 1) spawns. Pins spawn in a triangle going forward (+Y) from this point.")]
+	/// <summary>
+	/// Empty GameObject marking where the front pin (pin 1) spawns. Pins spawn in a triangle going forward (+Y) from this point.
+	/// </summary>
+	[Property, Group("Spawn Points")]
 	public GameObject PinSpawnPoint { get; set; }
 	
 	[Property, Group("Spawn Points")] public float PinSpacing { get; set; } = 30.48f; // 12 inches = 30.48cm between pin centers
