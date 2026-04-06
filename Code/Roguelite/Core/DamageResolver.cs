@@ -34,7 +34,10 @@ public static class DamageResolver
 	{
 		if ( targetObject is null ) return default;
 
-		// Search the hit object AND its ancestors for a HealthComponent
+		// Walk up the hierarchy to find the root entity with HealthComponent
+		// (traces often hit child models, but components live on the root)
+		targetObject = FindEntityRoot( targetObject );
+
 		var health = targetObject.Components.Get<RogueliteHealthComponent>( FindMode.EverythingInSelfAndDescendants );
 		if ( health is null || health.IsDead )
 			return default;
@@ -71,7 +74,7 @@ public static class DamageResolver
 		dmg = MathF.Max( 1f, dmg );
 
 		// 5. Apply damage
-		health.ApplyDamage( dmg, attack.Type );
+		health.ApplyDamage( dmg, attack.Type, attacker );
 
 		// 6. Knockback
 		if ( attack.CanKnockback && attack.KnockbackForce > 0 )
@@ -146,5 +149,22 @@ public static class DamageResolver
 		var rb = target.Components.Get<Rigidbody>();
 		if ( rb.IsValid() )
 			rb.ApplyImpulse( direction.Normal * force );
+	}
+
+	/// <summary>
+	/// Walk up the parent chain to find the GameObject that has a HealthComponent.
+	/// Traces often hit child models/colliders, but damage components live on the root entity.
+	/// </summary>
+	private static GameObject FindEntityRoot( GameObject obj )
+	{
+		var current = obj;
+		while ( current is not null )
+		{
+			if ( current.Components.Get<RogueliteHealthComponent>() is not null )
+				return current;
+			current = current.Parent;
+		}
+		// No health found in parents — return original (DamageResolver will bail with "no health")
+		return obj;
 	}
 }

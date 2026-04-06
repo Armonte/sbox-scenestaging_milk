@@ -128,7 +128,7 @@
           "__guid": "997aed10-04e6-4e9b-a2f9-87396660beae",
           "__enabled": true,
           "Flags": 0,
-          "Center": "0,0,44.66002",
+          "Center": "0,0,0",
           "ColliderFlags": 0,
           "Elasticity": null,
           "Friction": null,
@@ -1237,7 +1237,7 @@
       "__version": 2,
       "Flags": 0,
       "Name": "Cube (21)",
-      "Position": "1697.035,1379.935,-192",
+      "Position": "1696,1379.935,-192",
       "Rotation": "0,0,0,1",
       "Scale": "30,30,1",
       "Tags": "",
@@ -4061,7 +4061,7 @@
       "__version": 2,
       "Flags": 0,
       "Name": "NavAgent (131)",
-      "Position": "2678.141,2030.812,-156.4348",
+      "Position": "2678.141,2030.812,-160",
       "Rotation": "0,0,0,1",
       "Scale": "1,1,1",
       "Tags": "",
@@ -4138,7 +4138,7 @@
                 "AfterUILayer": false
               },
               "RenderType": "On",
-              "Tint": "0.71628,0.25819,0.16658,1"
+              "Tint": "0,1000,883.3334,1"
             }
           ],
           "Children": []
@@ -10057,12 +10057,16 @@
       "AgentMaxSlope": 30,
       "ExcludedBodies": "",
       "IncludedBodies": "",
-      "CustomBounds": false
+      "CustomBounds": false,
+      "BakedDataPath": {
+        "$reference_type": "filereference",
+        "path": "scenes/tests/navigation/nav.basic_scene_data/navmesh/baked.navdata"
+      }
     },
     "GameObjectSystems": {
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "2634dff9-7fd9-4dc4-bd16-fe93f8fc5a51"
+          "$blob": "bbd5e9d6-c1d4-4b82-9dc3-2f9a1cba7e7d"
         }
       },
       "Sandbox.MovieMaker.MovieRecorderSystem": {

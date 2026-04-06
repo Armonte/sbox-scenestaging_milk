@@ -16,14 +16,27 @@
         <div class="health-text">@GetHealthText()</div>
     </div>
 
-    @* Combo indicator *@
-    @if (GetComboStep() > 0)
-    {
-        <div class="combo-indicator">
-            <span class="combo-count">@GetComboStep()</span>
-            <span class="combo-label">HIT</span>
-        </div>
-    }
+    @* Weapon info *@
+    <div class="weapon-section">
+        <div class="weapon-name">@GetWeaponName()</div>
+
+        @* Combo indicator (sword) *@
+        @if (GetComboStep() > 0)
+        {
+            <div class="combo-indicator">
+                <span class="combo-count">@GetComboStep()</span>
+                <span class="combo-label">HIT</span>
+            </div>
+        }
+
+        @* Draw bar (bow) *@
+        @if (GetDrawProgress() > 0)
+        {
+            <div class="draw-bar">
+                <div class="draw-fill @(IsSweetspot() ? "sweetspot" : "")" style="width: @(GetDrawProgress() * 100f)%"></div>
+            </div>
+        }
+    </div>
 
     @* Speed counter *@
     <div class="speed-counter">@GetSpeed() u/s</div>
@@ -71,6 +84,29 @@
         return sword?.CurrentComboStep ?? 0;
     }
 
+    string GetWeaponName()
+    {
+        var player = GetPlayer();
+        if ( player?.ActiveWeapon is null ) return "No Weapon";
+        return player.ActiveWeapon.Category.ToString();
+    }
+
+    float GetDrawProgress()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return 0;
+        var bow = player.ActiveWeapon as BowWeapon;
+        return bow?.DrawProgress ?? 0;
+    }
+
+    bool IsSweetspot()
+    {
+        var player = GetPlayer();
+        if ( player is null ) return false;
+        var bow = player.ActiveWeapon as BowWeapon;
+        return bow?.IsSweetspot ?? false;
+    }
+
     string GetSpeed()
     {
         var player = GetPlayer();
@@ -98,6 +134,6 @@
     {
         var player = GetPlayer();
         if ( player is null ) return 0;
-        return HashCode.Combine( player.Health.Current, player.Health.MaxHealth, player.IsAlive, GetComboStep(), _showFlash, GetSpeed() );
+        return HashCode.Combine( player.Health.Current, player.Health.MaxHealth, player.IsAlive, GetComboStep(), _showFlash, GetSpeed(), GetDrawProgress(), GetWeaponName() );
     }
 }

@@ -14,6 +14,7 @@ public sealed class RogueliteHealthComponent : Component
 	public event Action OnDeath;
 	public event Action OnRevive;
 	public event Action<float, DamageType> OnDamageTaken;
+	public event Action<float, DamageType, Component> OnDamageTakenFull;
 	public event Action<float> OnHealed;
 
 	protected override void OnStart()
@@ -32,12 +33,13 @@ public sealed class RogueliteHealthComponent : Component
 	/// <summary>
 	/// Only called from DamageResolver. Do not call directly.
 	/// </summary>
-	internal void ApplyDamage( float amount, DamageType type )
+	internal void ApplyDamage( float amount, DamageType type, Component attacker = null )
 	{
 		if ( IsDead ) return;
 
 		Current = MathF.Max( 0, Current - amount );
 		OnDamageTaken?.Invoke( amount, type );
+		OnDamageTakenFull?.Invoke( amount, type, attacker );
 
 		if ( Current <= 0 )
 		{

@@ -10,6 +10,7 @@ public sealed class RoguelitePlayer : Component
 	[RequireComponent] public FactionComponent Faction { get; set; }
 	[RequireComponent] public PlayerMovement Movement { get; set; }
 	[RequireComponent] public PlayerCamera Camera { get; set; }
+	[RequireComponent] public AbilityComponent Abilities { get; set; }
 
 	[Property] public PlayerClass Class { get; set; } = PlayerClass.Warrior;
 
@@ -53,6 +54,28 @@ public sealed class RoguelitePlayer : Component
 		if ( !IsAlive ) return;
 
 		HandleWeaponInput();
+		HandleAbilityInput();
+	}
+
+	private void HandleAbilityInput()
+	{
+		if ( Input.Pressed( "Slot1" ) ) Abilities.TryActivate( 0, this, GetAimTarget() );
+		if ( Input.Pressed( "Slot2" ) ) Abilities.TryActivate( 1, this, GetAimTarget() );
+		if ( Input.Pressed( "Slot3" ) ) Abilities.TryActivate( 2, this, GetAimTarget() );
+		if ( Input.Pressed( "Slot4" ) ) Abilities.TryActivate( 3, this, GetAimTarget() );
+	}
+
+	private GameObject GetAimTarget()
+	{
+		var eyePos = WorldPosition + Vector3.Up * Camera.EyeHeight;
+		var forward = Camera.EyeAngles.ToRotation().Forward;
+
+		var tr = Scene.Trace
+			.Ray( eyePos, eyePos + forward * 1500f )
+			.IgnoreGameObjectHierarchy( GameObject )
+			.Run();
+
+		return tr.Hit ? tr.GameObject : null;
 	}
 
 	private void HandleWeaponInput()

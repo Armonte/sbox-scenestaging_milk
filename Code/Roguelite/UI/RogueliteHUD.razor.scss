@@ -49,30 +49,68 @@
         }
     }
 
-    .combo-indicator {
+    .weapon-section {
         position: absolute;
-        right: 40px;
-        top: 50%;
-        transform: translateY(-50%);
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
         display: flex;
         flex-direction: column;
         align-items: center;
-        background-color: rgba(0, 0, 0, 0.7);
-        padding: 8px 16px;
-        border-radius: 6px;
-        border-left: 3px solid #f39c12;
+        gap: 4px;
 
-        .combo-count {
-            font-size: 28px;
-            font-weight: bold;
-            color: #f39c12;
-        }
-
-        .combo-label {
-            font-size: 10px;
+        .weapon-name {
             color: #ccc;
+            font-size: 12px;
+            font-family: 'Segoe UI', sans-serif;
             text-transform: uppercase;
             letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .combo-indicator {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 4px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 4px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #f39c12;
+
+            .combo-count {
+                font-size: 20px;
+                font-weight: bold;
+                color: #f39c12;
+                font-family: 'Segoe UI', sans-serif;
+            }
+
+            .combo-label {
+                font-size: 10px;
+                color: #ccc;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                font-family: 'Segoe UI', sans-serif;
+            }
+        }
+
+        .draw-bar {
+            width: 200px;
+            height: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #555;
+            border-radius: 4px;
+            overflow: hidden;
+
+            .draw-fill {
+                height: 100%;
+                background: linear-gradient(to right, #3498db, #2ecc71);
+                transition: width 0.05s ease;
+
+                &.sweetspot {
+                    background: linear-gradient(to right, #f39c12, #e74c3c);
+                }
+            }
         }
     }
 

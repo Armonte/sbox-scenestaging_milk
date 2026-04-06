@@ -1,6 +1,7 @@
 /// <summary>
 /// Base enemy component. Uses NavMeshAgent for pathfinding direction only.
 /// We drive WorldPosition ourselves to avoid NavAgent snapping/teleporting.
+/// EnemyBrain handles state machine logic. Subclasses override PerformAttack and CreateBrain.
 /// </summary>
 [Title( "Roguelite Enemy" )]
 [Icon( "pest_control" )]
@@ -9,6 +10,7 @@ public class RogueliteEnemyBase : Component
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
 	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
 	[RequireComponent] public FactionComponent Faction { get; set; }
+	[RequireComponent] public AggroComponent Aggro { get; set; }
 
 	[Property] public float AttackDamage { get; set; } = 25f;
 	[Property] public float AttackRange { get; set; } = 120f;
@@ -20,7 +22,9 @@ public class RogueliteEnemyBase : Component
 
 	[Sync] public bool IsStunned { get; set; }
 
-	protected RoguelitePlayer CurrentTarget;
+	public RoguelitePlayer CurrentTarget;
+
+	protected EnemyBrain Brain;
 	private float _attackTimer;
 	private float _stunTimer;
 	private SkinnedModelRenderer _model;
@@ -36,14 +40,35 @@ public class RogueliteEnemyBase : Component
 		Health.Init( Health.MaxHealth );
 		Health.OnDeath += OnDeath;
 
+		// Wire aggro — when we take damage, record threat from the attacker
+		Health.OnDamageTakenFull += ( amount, type, attacker ) =>
+		{
+			if ( attacker is not null )
+				Aggro.RecordDamage( attacker.GameObject, amount );
+		};
+
 		_model = Components.Get<SkinnedModelRenderer>( FindMode.EverythingInSelfAndDescendants );
+
+		// Disable animgraph — we drive all animations via Sequence
+		if ( _model is not null )
+		{
+			_model.UseAnimGraph = false;
+			_model.Sequence.Name = "idle";
+			_model.Sequence.Looping = true;
+		}
 
 		// We drive position ourselves — NavAgent is only for pathfinding direction
 		Nav.UpdatePosition = false;
 		Nav.UpdateRotation = false;
 
+		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
 	}
+
+	/// <summary>
+	/// Override in subclasses to provide a custom brain with different behavior.
+	/// </summary>
+	protected virtual EnemyBrain CreateBrain() => new EnemyBrain( this );
 
 	protected override void OnUpdate()
 	{
@@ -55,7 +80,6 @@ public class RogueliteEnemyBase : Component
 		{
 			UpdateKnockback();
 
-			// Slowly turn toward player while airborne
 			if ( CurrentTarget is not null )
 			{
 				var dirToTarget = (CurrentTarget.WorldPosition - WorldPosition).WithZ( 0 );
@@ -65,6 +89,7 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
+		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
 		{
 			_stunTimer -= Time.Delta;
@@ -75,63 +100,111 @@ public class RogueliteEnemyBase : Component
 
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
-		FindTarget();
+		// Let the brain compute the state
+		Brain.Tick();
 
-		if ( CurrentTarget is not null && CurrentTarget.IsAlive )
+		switch ( Brain.State )
 		{
-			var distance = WorldPosition.Distance( CurrentTarget.WorldPosition );
-			var dirToTarget = (CurrentTarget.WorldPosition - WorldPosition).WithZ( 0 );
+			case EnemyBrainState.Idle:
+				Nav.Stop();
+				break;
 
-			if ( distance <= AttackRange )
-			{
-				// In attack range — smoothly face target, attack if ready
-				if ( dirToTarget.Length > 1f )
-					WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( dirToTarget, Vector3.Up ), Time.Delta * 5f );
+			case EnemyBrainState.Chase:
+				ChaseTarget();
+				break;
 
+			case EnemyBrainState.Attack:
+				FaceTarget();
 				if ( _attackTimer <= 0 )
 				{
 					PerformAttack( CurrentTarget );
 					_attackTimer = AttackCooldown;
 				}
-			}
-			else if ( distance <= DetectionRange )
-			{
-				// Chase — use NavAgent for direction, move ourselves
-				Nav.MoveTo( CurrentTarget.WorldPosition );
+				break;
 
-				var wishDir = Nav.WishVelocity;
-				if ( wishDir.Length > 1f )
-				{
-					WorldPosition += wishDir.Normal * MoveSpeed * Time.Delta;
-					WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( wishDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
-				}
+			case EnemyBrainState.Flee:
+				FleeFromTarget();
+				break;
 
-				// Keep NavAgent in sync with our position
-				Nav.SetAgentPosition( WorldPosition );
-			}
+			case EnemyBrainState.Stunned:
+				break;
 		}
+
+		SeparateFromOtherEnemies();
 
 		if ( !_inKnockback )
 			StickToGround();
 		UpdateAnimation();
 	}
 
-	private void FindTarget()
+	// --- Movement ---
+
+	protected virtual void ChaseTarget()
 	{
-		if ( CurrentTarget is not null && CurrentTarget.IsAlive )
+		if ( CurrentTarget is null ) return;
+
+		Nav.MoveTo( CurrentTarget.WorldPosition );
+
+		var wishDir = Nav.WishVelocity;
+		if ( wishDir.Length > 1f )
 		{
-			var dist = WorldPosition.Distance( CurrentTarget.WorldPosition );
-			if ( dist <= DetectionRange ) return;
+			WorldPosition += wishDir.Normal * MoveSpeed * Time.Delta;
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( wishDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
 		}
 
-		CurrentTarget = Scene.GetAllComponents<RoguelitePlayer>()
-			.Where( p => p.IsAlive )
-			.OrderBy( p => WorldPosition.Distance( p.WorldPosition ) )
-			.FirstOrDefault();
+		Nav.SetAgentPosition( WorldPosition );
 	}
+
+	protected virtual void FleeFromTarget()
+	{
+		if ( CurrentTarget is null ) return;
+
+		var awayDir = (WorldPosition - CurrentTarget.WorldPosition).WithZ( 0 );
+		if ( awayDir.Length < 1f ) awayDir = Vector3.Random.WithZ( 0 );
+
+		var fleeTarget = WorldPosition + awayDir.Normal * 400f;
+		Nav.MoveTo( fleeTarget );
+
+		var wishDir = Nav.WishVelocity;
+		if ( wishDir.Length > 1f )
+		{
+			WorldPosition += wishDir.Normal * MoveSpeed * Time.Delta;
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( wishDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
+		}
+
+		Nav.SetAgentPosition( WorldPosition );
+	}
+
+	protected void FaceTarget()
+	{
+		if ( CurrentTarget is null ) return;
+		var dirToTarget = (CurrentTarget.WorldPosition - WorldPosition).WithZ( 0 );
+		if ( dirToTarget.Length > 1f )
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( dirToTarget, Vector3.Up ), Time.Delta * 5f );
+	}
+
+	// --- Combat ---
+
+	[Property] public float AttackHitDelay { get; set; } = 0.35f;
 
 	protected virtual void PerformAttack( RoguelitePlayer target )
 	{
+		// Start the animation first, delay the actual damage
+		PlayAttackAnim();
+		_ = DelayedDamage( target, AttackHitDelay );
+	}
+
+	private async Task DelayedDamage( RoguelitePlayer target, float delay )
+	{
+		await GameTask.DelaySeconds( delay );
+
+		if ( !IsValid || Health.IsDead ) return;
+		if ( target is null || !target.IsValid() || !target.IsAlive ) return;
+
+		// Re-check range — target may have moved away during windup
+		var dist = WorldPosition.Distance( target.WorldPosition );
+		if ( dist > AttackRange * 1.5f ) return;
+
 		var attack = new AttackData( AttackDamage, DamageType.Blunt );
 
 		var ctx = new HitContext(
@@ -139,16 +212,26 @@ public class RogueliteEnemyBase : Component
 			(target.WorldPosition - WorldPosition).Normal,
 			target.WorldPosition,
 			Vector3.Up,
-			WorldPosition.Distance( target.WorldPosition ),
+			dist,
 			false,
 			false );
 
 		DamageResolver.Resolve( attack, this, target.GameObject, ctx );
-		BroadcastAttack();
 	}
 
-	[Rpc.Broadcast]
-	private void BroadcastAttack() { }
+	private bool _isAttacking;
+	private float _attackAnimTimer;
+
+	protected void PlayAttackAnim()
+	{
+		if ( _model is null ) return;
+		_model.Sequence.Name = "attack";
+		_model.Sequence.Time = 0;
+		_model.Sequence.Looping = false;
+		_isAttacking = true;
+		_attackAnimTimer = _model.Sequence.Duration;
+		if ( _attackAnimTimer <= 0 ) _attackAnimTimer = 0.8f;
+	}
 
 	// --- Knockback ---
 
@@ -163,14 +246,11 @@ public class RogueliteEnemyBase : Component
 
 	private void UpdateKnockback()
 	{
-		// Gravity
 		_knockVelocity -= Vector3.Up * 800f * Time.Delta;
 
-		// Move in small steps to avoid overshooting the ground
 		var movement = _knockVelocity * Time.Delta;
 		var newPos = WorldPosition + movement;
 
-		// Ground check — trace from well above to well below
 		var tr = Scene.Trace
 			.Ray( newPos + Vector3.Up * 50f, newPos + Vector3.Down * 500f )
 			.IgnoreGameObjectHierarchy( GameObject )
@@ -179,10 +259,7 @@ public class RogueliteEnemyBase : Component
 
 		if ( tr.Hit && _knockVelocity.z < 0 && newPos.z <= tr.HitPosition.z )
 		{
-			// Don't go below ground — lerp to landing
 			newPos = newPos.WithZ( tr.HitPosition.z );
-
-			// Bounce or stop
 			_knockVelocity = _knockVelocity.WithZ( 0 );
 
 			if ( _knockVelocity.WithZ( 0 ).Length < 20f )
@@ -194,14 +271,35 @@ public class RogueliteEnemyBase : Component
 
 		WorldPosition = newPos;
 
-		// Horizontal drag
 		var hz = _knockVelocity.WithZ( 0 ) * 0.95f;
 		_knockVelocity = hz.WithZ( _knockVelocity.z );
 	}
 
+	// --- Separation ---
+
+	protected virtual void SeparateFromOtherEnemies()
+	{
+		var minDist = Nav.Radius * 3f;
+
+		foreach ( var other in Scene.GetAllComponents<RogueliteEnemyBase>() )
+		{
+			if ( other == this || other.Health.IsDead ) continue;
+
+			var diff = WorldPosition - other.WorldPosition;
+			var dist = diff.WithZ( 0 ).Length;
+
+			if ( dist < minDist && dist > 0.1f )
+			{
+				var pushDir = diff.WithZ( 0 ).Normal;
+				var pushStrength = (minDist - dist) * 2f * Time.Delta;
+				WorldPosition += pushDir * pushStrength;
+			}
+		}
+	}
+
 	// --- Ground stick ---
 
-	private void StickToGround()
+	protected virtual void StickToGround()
 	{
 		var tr = Scene.Trace
 			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Down * 200f )
@@ -239,19 +337,33 @@ public class RogueliteEnemyBase : Component
 
 	// --- Animation ---
 
-	private void UpdateAnimation()
+	protected virtual void UpdateAnimation()
 	{
 		if ( _model is null ) return;
 
-		var vel = Nav.WishVelocity;
-		var forward = WorldRotation.Forward.Dot( vel );
-		var sideward = WorldRotation.Right.Dot( vel );
-		var angle = MathF.Atan2( sideward, forward ).RadianToDegree().NormalizeDegrees();
+		// Attack anim playing — let it finish
+		if ( _isAttacking )
+		{
+			_attackAnimTimer -= Time.Delta;
+			if ( _attackAnimTimer <= 0 )
+				_isAttacking = false;
+			return;
+		}
 
-		_model.Set( "move_direction", angle );
-		_model.Set( "move_speed", vel.Length );
-		_model.Set( "move_groundspeed", vel.WithZ( 0 ).Length );
-		_model.Set( "move_y", sideward );
-		_model.Set( "move_x", forward );
+		// Pick sequence based on movement
+		var speed = Nav.WishVelocity.WithZ( 0 ).Length;
+		string desired;
+
+		if ( speed > 5f )
+			desired = "walk_N";
+		else
+			desired = "idle";
+
+		if ( _model.Sequence.Name != desired )
+		{
+			_model.Sequence.Name = desired;
+			_model.Sequence.Time = 0;
+			_model.Sequence.Looping = true;
+		}
 	}
 }

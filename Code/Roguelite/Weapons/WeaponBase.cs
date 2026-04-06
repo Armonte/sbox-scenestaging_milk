@@ -16,8 +16,7 @@ public abstract class WeaponBase : Component
 
 	protected RoguelitePlayer Owner;
 
-	// Inline cooldown tracker — extracted to CooldownTracker class in Phase 3
-	private readonly Dictionary<string, float> _cooldowns = new();
+	private readonly CooldownTracker _cooldowns = new();
 
 	public virtual void OnEquip( RoguelitePlayer owner ) => Owner = owner;
 	public virtual void OnUnequip( RoguelitePlayer owner ) => Owner = null;
@@ -27,9 +26,7 @@ public abstract class WeaponBase : Component
 	{
 		if ( Owner is null || !Owner.IsAlive ) return;
 
-		// Tick cooldowns
-		foreach ( var key in _cooldowns.Keys.ToList() )
-			_cooldowns[key] = MathF.Max( 0, _cooldowns[key] - Time.Delta );
+		_cooldowns.Tick( Time.Delta );
 
 		OnWeaponTick();
 	}
@@ -41,13 +38,9 @@ public abstract class WeaponBase : Component
 
 	// --- Cooldown helpers ---
 
-	protected bool IsCooldownReady( string id ) =>
-		!_cooldowns.ContainsKey( id ) || _cooldowns[id] <= 0;
-
-	protected void StartCooldown( string id, float duration ) =>
-		_cooldowns[id] = duration;
-
-	protected void ResetAllCooldowns() => _cooldowns.Clear();
+	protected bool IsCooldownReady( string id ) => _cooldowns.IsReady( id );
+	protected void StartCooldown( string id, float duration ) => _cooldowns.Start( id, duration );
+	protected void ResetAllCooldowns() => _cooldowns.Reset();
 
 	// --- Attack helpers ---
 
