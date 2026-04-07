@@ -1,9 +1,5 @@
 namespace Sandbox;
 
-/// <summary>
-/// Component that renders a vertex-colored 3D skybox sphere.
-/// The skybox mesh follows the camera so it always appears at infinity.
-/// </summary>
 [Title( "Spyro Skybox" )]
 [Category( "Rendering" )]
 [Icon( "cloud" )]
@@ -12,9 +8,6 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	[Hide]
 	public SkyboxData Data { get; set; }
 
-	/// <summary>
-	/// Background sky color. Fills the sky behind the vertex mesh.
-	/// </summary>
 	[Property, Title( "Background Color" )]
 	public Color BackgroundColor
 	{
@@ -22,20 +15,16 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 		set
 		{
 			_bgColor = value;
-			if ( Scene?.SceneWorld != null )
-				Scene.SceneWorld.ClearColor = value;
+			ApplyBackgroundColor();
 		}
 	}
 	private Color _bgColor = Color.Black;
 
-	/// <summary>
-	/// Scale of the skybox sphere. Keep within camera ZFar.
-	/// </summary>
 	[Property, Range( 1f, 1000f ), Title( "Scale" )]
 	public float SkyboxScale
 	{
 		get => _skyboxScale;
-		set { if ( _skyboxScale != value ) { _skyboxScale = value; MarkDirty(); } }
+		set { if ( _skyboxScale != value ) { _skyboxScale = value; RebuildMesh(); } }
 	}
 	private float _skyboxScale = 10f;
 
@@ -43,7 +32,7 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	public float ColorSaturation
 	{
 		get => _colorSaturation;
-		set { if ( _colorSaturation != value ) { _colorSaturation = value; MarkDirty(); } }
+		set { if ( _colorSaturation != value ) { _colorSaturation = value; RebuildMesh(); } }
 	}
 	private float _colorSaturation = 1.2f;
 
@@ -51,33 +40,26 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	public float ColorBrightness
 	{
 		get => _colorBrightness;
-		set { if ( _colorBrightness != value ) { _colorBrightness = value; MarkDirty(); } }
+		set { if ( _colorBrightness != value ) { _colorBrightness = value; RebuildMesh(); } }
 	}
 	private float _colorBrightness = 1.0f;
 
-	[Property, Range( 0.3f, 2.0f ), Title( "Gamma" )]
+	[Property, Range( 0.3f, 3.0f ), Title( "Gamma" )]
 	public float ColorGamma
 	{
 		get => _colorGamma;
-		set { if ( _colorGamma != value ) { _colorGamma = value; MarkDirty(); } }
+		set { if ( _colorGamma != value ) { _colorGamma = value; RebuildMesh(); } }
 	}
 	private float _colorGamma = 2.0f;
 
 	[Property, Hide]
 	public string SerializedSkye { get; set; }
 
-	private SceneCustomObject _sceneObject;
-	private Material _material;
-	private VertexBuffer _vertexBuffer;
-	private bool _meshDirty = true;
-	private float _lastScale;
-	private Vector3 _lastPosition;
-	private Rotation _lastRotation;
+	SceneObject _sceneObject;
+	Model _model;
 
 	protected override void OnEnabled()
 	{
-		_material = CreateSkyboxMaterial();
-
 		if ( Data == null )
 		{
 			if ( !string.IsNullOrEmpty( SerializedSkye ) )
@@ -86,51 +68,40 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 				Data = SphereGeometry.GenerateSphere( 100f, 12, 24 );
 		}
 
-		RebuildMesh();
+		BuildModel();
 
-		// Disable any existing 2D skyboxes so our background color shows
-		foreach ( var sky2d in Scene.GetAllComponents<SkyBox2D>() )
-		{
-			sky2d.Enabled = false;
-		}
+		_sceneObject = new SceneObject( Scene.SceneWorld, _model, WorldTransform );
+		_sceneObject.Flags.CastShadows = false;
 
-		// Apply background color
-		if ( Scene?.SceneWorld != null )
-			Scene.SceneWorld.ClearColor = _bgColor;
+		Transform.OnTransformChanged += OnTransformChanged;
+		ApplyBackgroundColor();
 	}
 
 	protected override void OnDisabled()
 	{
+		Transform.OnTransformChanged -= OnTransformChanged;
 		_sceneObject?.Delete();
 		_sceneObject = null;
-		_vertexBuffer = null;
-		_material = null;
+		_model = null;
 	}
 
 	protected override void OnUpdate()
 	{
-		if ( _meshDirty || SkyboxScale != _lastScale || WorldPosition != _lastPosition || WorldRotation != _lastRotation )
+		// Follow camera so skybox appears at infinity
+		if ( Game.IsPlaying && _sceneObject != null && _sceneObject.IsValid() )
 		{
-			RebuildMesh();
-			_meshDirty = false;
-			_lastScale = SkyboxScale;
-			_lastPosition = WorldPosition;
-			_lastRotation = WorldRotation;
+			var cam = Scene.Camera ?? Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
+			if ( cam != null )
+				_sceneObject.Transform = new Transform( cam.WorldPosition );
 		}
 
-		// In editor: follow the GameObject's position so you can place it
-		// In game: follow the camera so it appears at infinity
-		if ( _sceneObject != null )
-		{
-			if ( Scene.IsEditor )
-				_sceneObject.Transform = new Transform( WorldPosition, WorldRotation );
-			else if ( Scene?.Camera != null )
-				_sceneObject.Transform = new Transform( Scene.Camera.WorldPosition );
-		}
+		ApplyBackgroundColor();
+	}
 
-		// Set background clear color
-		if ( Scene?.SceneWorld != null )
-			Scene.SceneWorld.ClearColor = _bgColor;
+	private void OnTransformChanged()
+	{
+		if ( _sceneObject != null && _sceneObject.IsValid() && !Game.IsPlaying )
+			_sceneObject.Transform = WorldTransform;
 	}
 
 	public void LoadFromString( string skyeContent )
@@ -141,14 +112,9 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 		var bg = Data.BackgroundColor;
 		BackgroundColor = new Color( bg.r / 255f, bg.g / 255f, bg.b / 255f );
 
-		MarkDirty();
 		RebuildMesh();
 	}
 
-	/// <summary>
-	/// Load a SkyboxData directly (e.g. from Spyro JSON import).
-	/// Serializes to .skye for persistence, applies background color.
-	/// </summary>
 	public void LoadData( SkyboxData data )
 	{
 		Data = data;
@@ -157,7 +123,6 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 		var bg = Data.BackgroundColor;
 		BackgroundColor = new Color( bg.r / 255f, bg.g / 255f, bg.b / 255f );
 
-		MarkDirty();
 		RebuildMesh();
 	}
 
@@ -167,73 +132,63 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 			SerializedSkye = SkyeFormat.WriteString( Data );
 	}
 
-	public void MarkDirty()
-	{
-		_meshDirty = true;
-	}
+	public void MarkDirty() => RebuildMesh();
 
 	public void RebuildMesh()
 	{
 		if ( Data == null ) return;
 
-		_material ??= CreateSkyboxMaterial();
-		if ( _material == null ) return;
+		BuildModel();
 
-		// Build vertices centered at origin — SceneObject follows camera each frame
-		_vertexBuffer = new VertexBuffer();
-		_vertexBuffer.Init( true );
+		if ( _sceneObject != null && _sceneObject.IsValid() && _model != null )
+			_sceneObject.Model = _model;
+	}
+
+	private void BuildModel()
+	{
+		var mat = Material.Load( "materials/vertexcolor_skybox.vmat" );
+		if ( mat == null || !mat.IsValid )
+		{
+			Log.Warning( "[Skybox] vertexcolor_skybox.vmat not found" );
+			mat = Material.Load( "materials/dev/reflectivity_30.vmat" );
+		}
 
 		float scale = SkyboxScale;
-		var center = WorldPosition;
-		var rot = WorldRotation;
 
+		var vertices = new List<Vertex>( Data.Vertices.Count );
 		for ( int i = 0; i < Data.Vertices.Count; i++ )
 		{
 			var sv = Data.Vertices[i];
 			var rp = sv.RenderPosition;
 			var localPos = new Vector3( -rp.x, rp.y, rp.z ) * scale;
-			var worldPos = center + rot * localPos;
 			var c = BoostColor( sv.Color );
-			// Swap R and B for GPU BGRA vertex color format
 			var gpu = new Color32( c.b, c.g, c.r, c.a );
-			_vertexBuffer.Add( new Vertex( worldPos, gpu ) { Normal = rp.Normal } );
-
-			// Debug: log first vertex's color chain
-			if ( i == 0 )
-			{
-				var raw = sv.Color;
-				Log.Info( $"[SkyDebug] Vert0 raw Color32: r={raw.r} g={raw.g} b={raw.b} a={raw.a}" );
-				Log.Info( $"[SkyDebug] Vert0 boosted Color32: r={c.r} g={c.g} b={c.b} a={c.a}" );
-				Log.Info( $"[SkyDebug] Vert0 pos: {worldPos}" );
-			}
+			vertices.Add( new Vertex( localPos, gpu ) { Normal = rp.Normal } );
 		}
 
-		Log.Info( $"[SkyDebug] RebuildMesh: {Data.Vertices.Count} verts, {Data.Triangles.Count} tris, scale={scale}" );
-
+		var indices = new List<int>( Data.Triangles.Count * 3 );
 		for ( int i = 0; i < Data.Triangles.Count; i++ )
 		{
 			var tri = Data.Triangles[i];
-			_vertexBuffer.AddRawIndex( tri.V2 );
-			_vertexBuffer.AddRawIndex( tri.V1 );
-			_vertexBuffer.AddRawIndex( tri.V0 );
+			indices.Add( tri.V2 );
+			indices.Add( tri.V1 );
+			indices.Add( tri.V0 );
 		}
 
-		_sceneObject?.Delete();
-		if ( Scene?.SceneWorld != null )
-		{
-			_sceneObject = new SceneCustomObject( Scene.SceneWorld );
-			_sceneObject.Flags.CastShadows = false;
-			_sceneObject.Flags.IsOpaque = true;
-			_sceneObject.Bounds = BBox.FromPositionAndSize( Vector3.Zero, 999999f );
-			_sceneObject.RenderLayer = SceneRenderLayer.OverlayWithDepth;
+		var mesh = new Mesh( mat );
+		mesh.CreateVertexBuffer( vertices.Count, vertices );
+		mesh.CreateIndexBuffer( indices.Count, indices );
+		mesh.Bounds = BBox.FromPositionAndSize( Vector3.Zero, scale * 150f );
 
-			_sceneObject.RenderOverride = RenderSkybox;
-		}
+		var builder = new ModelBuilder();
+		builder.AddMesh( mesh );
+		_model = builder.Create();
 	}
 
-	private void RenderSkybox( SceneObject so )
+	private void ApplyBackgroundColor()
 	{
-		_vertexBuffer?.Draw( _material );
+		foreach ( var cam in Scene.GetAllComponents<CameraComponent>() )
+			cam.BackgroundColor = _bgColor;
 	}
 
 	private Color32 BoostColor( Color32 c )
@@ -264,18 +219,5 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 			(byte)(Math.Clamp( b, 0f, 1f ) * 255),
 			c.a
 		);
-	}
-
-	private Material CreateSkyboxMaterial()
-	{
-		var mat = Material.Load( "materials/vertexcolor_skybox.vmat" );
-		if ( mat != null && mat.IsValid )
-		{
-			Log.Info( "SkyboxComponent: Loaded vertexcolor_skybox.vmat" );
-			return mat;
-		}
-
-		Log.Warning( "SkyboxComponent: vmat not found, using dev material" );
-		return Material.Load( "materials/dev/reflectivity_30.vmat" );
 	}
 }
