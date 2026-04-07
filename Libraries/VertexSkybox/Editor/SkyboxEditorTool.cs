@@ -1,6 +1,4 @@
 using Sandbox;
-using System;
-using System.Collections.Generic;
 
 namespace Editor;
 
@@ -59,14 +57,20 @@ public class SkyboxToolWindow : WidgetWindow
 		var data = _session?.Target?.Data;
 		int verts = data?.Vertices?.Count ?? 0;
 		int tris = data?.Triangles?.Count ?? 0;
+		int edges = data?.Edges?.Count ?? 0;
 
 		Layout.AddSpacingCell( 8 );
-		Layout.Add( new Label( $"  Verts: {verts}   Tris: {tris}" ) { FixedHeight = 24 } );
+		Layout.Add( new Label( $"  Verts: {verts}   Tris: {tris}   Edges: {edges}" ) { FixedHeight = 24 } );
 		Layout.AddSpacingCell( 4 );
 
 		var loadBtn = new Button( "Load .skye File", "upload_file" ) { FixedHeight = 28 };
 		loadBtn.Clicked = LoadSkyeFile;
 		Layout.Add( loadBtn );
+		Layout.AddSpacingCell( 4 );
+
+		var importBtn = new Button( "Import Spyro Sky (.json)", "videogame_asset" ) { FixedHeight = 28 };
+		importBtn.Clicked = ImportSpyroSky;
+		Layout.Add( importBtn );
 		Layout.AddSpacingCell( 4 );
 
 		Layout.Margin = 8;
@@ -89,16 +93,53 @@ public class SkyboxToolWindow : WidgetWindow
 		var path = fd.SelectedFile;
 		if ( string.IsNullOrEmpty( path ) ) return;
 
-		try
+		var content = FileSystem.Root.ReadAllText( path );
+		if ( string.IsNullOrEmpty( content ) )
 		{
-			var content = System.IO.File.ReadAllText( path );
-			_session.Target.LoadFromString( content );
-			Rebuild();
-			Log.Info( $"Loaded skybox: {_session.Target.Data.Vertices.Count} verts, {_session.Target.Data.Triangles.Count} tris" );
+			Log.Warning( "Failed to read skybox file" );
+			return;
 		}
-		catch ( Exception e )
+
+		_session.Target.LoadFromString( content );
+		Rebuild();
+		Log.Info( $"Loaded skybox: {_session.Target.Data.Vertices.Count} verts, {_session.Target.Data.Triangles.Count} tris" );
+	}
+
+	void ImportSpyroSky()
+	{
+		if ( _session?.Target == null )
 		{
-			Log.Error( $"Failed to load skybox: {e.Message}" );
+			Log.Warning( "No SkyboxComponent found in scene. Add one first." );
+			return;
 		}
+
+		var fd = new FileDialog( null );
+		fd.Title = "Import Spyro Sky";
+		fd.SetNameFilter( "Spyro Sky JSON (*.json)" );
+
+		if ( !fd.Execute() ) return;
+
+		var path = fd.SelectedFile;
+		if ( string.IsNullOrEmpty( path ) ) return;
+
+		var content = FileSystem.Root.ReadAllText( path );
+		if ( string.IsNullOrEmpty( content ) )
+		{
+			Log.Warning( "Failed to read Spyro sky file" );
+			return;
+		}
+
+		var data = SpyroSkyFormat.ParseJson( content );
+		if ( data == null )
+		{
+			Log.Warning( "Failed to parse Spyro sky JSON" );
+			return;
+		}
+
+		_session.Target.LoadData( data );
+		Rebuild();
+
+		var bg = data.BackgroundColor;
+		Log.Info( $"Imported Spyro sky: {data.Vertices.Count} verts, {data.Triangles.Count} tris, {data.Edges.Count} edges, bg=({bg.r},{bg.g},{bg.b})" );
 	}
 }
