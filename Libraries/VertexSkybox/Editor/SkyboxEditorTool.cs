@@ -68,11 +68,6 @@ public class SkyboxToolWindow : WidgetWindow
 		Layout.Add( loadBtn );
 		Layout.AddSpacingCell( 4 );
 
-		var importBtn = new Button( "Import Spyro Sky (.json)", "videogame_asset" ) { FixedHeight = 28 };
-		importBtn.Clicked = ImportSpyroSky;
-		Layout.Add( importBtn );
-		Layout.AddSpacingCell( 4 );
-
 		Layout.Margin = 8;
 	}
 
@@ -93,7 +88,7 @@ public class SkyboxToolWindow : WidgetWindow
 		var path = fd.SelectedFile;
 		if ( string.IsNullOrEmpty( path ) ) return;
 
-		var content = FileSystem.Root.ReadAllText( path );
+		var content = System.IO.File.ReadAllText( path );
 		if ( string.IsNullOrEmpty( content ) )
 		{
 			Log.Warning( "Failed to read skybox file" );
@@ -103,43 +98,5 @@ public class SkyboxToolWindow : WidgetWindow
 		_session.Target.LoadFromString( content );
 		Rebuild();
 		Log.Info( $"Loaded skybox: {_session.Target.Data.Vertices.Count} verts, {_session.Target.Data.Triangles.Count} tris" );
-	}
-
-	void ImportSpyroSky()
-	{
-		if ( _session?.Target == null )
-		{
-			Log.Warning( "No SkyboxComponent found in scene. Add one first." );
-			return;
-		}
-
-		var fd = new FileDialog( null );
-		fd.Title = "Import Spyro Sky";
-		fd.SetNameFilter( "Spyro Sky JSON (*.json)" );
-
-		if ( !fd.Execute() ) return;
-
-		var path = fd.SelectedFile;
-		if ( string.IsNullOrEmpty( path ) ) return;
-
-		var content = FileSystem.Root.ReadAllText( path );
-		if ( string.IsNullOrEmpty( content ) )
-		{
-			Log.Warning( "Failed to read Spyro sky file" );
-			return;
-		}
-
-		var data = SpyroSkyFormat.ParseJson( content );
-		if ( data == null )
-		{
-			Log.Warning( "Failed to parse Spyro sky JSON" );
-			return;
-		}
-
-		_session.Target.LoadData( data );
-		Rebuild();
-
-		var bg = data.BackgroundColor;
-		Log.Info( $"Imported Spyro sky: {data.Vertices.Count} verts, {data.Triangles.Count} tris, {data.Edges.Count} edges, bg=({bg.r},{bg.g},{bg.b})" );
 	}
 }

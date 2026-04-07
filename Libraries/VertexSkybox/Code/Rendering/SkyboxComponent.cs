@@ -95,8 +95,6 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 		}
 
 		// Apply background color
-		if ( Scene?.Camera != null )
-			Scene.Camera.BackgroundColor = _bgColor;
 		if ( Scene?.SceneWorld != null )
 			Scene.SceneWorld.ClearColor = _bgColor;
 	}
@@ -130,15 +128,9 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 				_sceneObject.Transform = new Transform( Scene.Camera.WorldPosition );
 		}
 
-		// Force background color
+		// Set background clear color
 		if ( Scene?.SceneWorld != null )
 			Scene.SceneWorld.ClearColor = _bgColor;
-		if ( Scene?.Camera != null )
-			Scene.Camera.BackgroundColor = _bgColor;
-
-		// Also set on any SceneCamera we can find
-		foreach ( var cam in Scene.GetAllComponents<CameraComponent>() )
-			cam.BackgroundColor = _bgColor;
 	}
 
 	public void LoadFromString( string skyeContent )
@@ -202,8 +194,21 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 			var localPos = new Vector3( -rp.x, rp.y, rp.z ) * scale;
 			var worldPos = center + rot * localPos;
 			var c = BoostColor( sv.Color );
-			_vertexBuffer.Add( new Vertex( worldPos, c ) { Normal = rp.Normal } );
+			// Swap R and B for GPU BGRA vertex color format
+			var gpu = new Color32( c.b, c.g, c.r, c.a );
+			_vertexBuffer.Add( new Vertex( worldPos, gpu ) { Normal = rp.Normal } );
+
+			// Debug: log first vertex's color chain
+			if ( i == 0 )
+			{
+				var raw = sv.Color;
+				Log.Info( $"[SkyDebug] Vert0 raw Color32: r={raw.r} g={raw.g} b={raw.b} a={raw.a}" );
+				Log.Info( $"[SkyDebug] Vert0 boosted Color32: r={c.r} g={c.g} b={c.b} a={c.a}" );
+				Log.Info( $"[SkyDebug] Vert0 pos: {worldPos}" );
+			}
 		}
+
+		Log.Info( $"[SkyDebug] RebuildMesh: {Data.Vertices.Count} verts, {Data.Triangles.Count} tris, scale={scale}" );
 
 		for ( int i = 0; i < Data.Triangles.Count; i++ )
 		{
@@ -222,13 +227,13 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 			_sceneObject.Bounds = BBox.FromPositionAndSize( Vector3.Zero, 999999f );
 			_sceneObject.RenderLayer = SceneRenderLayer.OverlayWithDepth;
 
-			var mat = _material;
-			var vb = _vertexBuffer;
-			_sceneObject.RenderOverride = ( so ) =>
-			{
-				vb.Draw( mat );
-			};
+			_sceneObject.RenderOverride = RenderSkybox;
 		}
+	}
+
+	private void RenderSkybox( SceneObject so )
+	{
+		_vertexBuffer?.Draw( _material );
 	}
 
 	private Color32 BoostColor( Color32 c )
@@ -263,21 +268,14 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 
 	private Material CreateSkyboxMaterial()
 	{
-		var mat = Material.Create( "vertexcolor_sky_inst", "shaders/vertexcolor_sky.shader" );
+		var mat = Material.Load( "materials/vertexcolor_skybox.vmat" );
 		if ( mat != null && mat.IsValid )
 		{
-			Log.Info( "SkyboxComponent: Created vertexcolor_sky material" );
+			Log.Info( "SkyboxComponent: Loaded vertexcolor_skybox.vmat" );
 			return mat;
 		}
 
-		mat = Material.Create( "vertexcolor_sky_line", "shaders/line.shader" );
-		if ( mat != null && mat.IsValid )
-		{
-			Log.Info( "SkyboxComponent: Using line.shader fallback" );
-			return mat;
-		}
-
-		Log.Warning( "SkyboxComponent: No shader found" );
+		Log.Warning( "SkyboxComponent: vmat not found, using dev material" );
 		return Material.Load( "materials/dev/reflectivity_30.vmat" );
 	}
 }

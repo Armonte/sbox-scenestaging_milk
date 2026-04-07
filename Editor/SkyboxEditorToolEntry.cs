@@ -12,6 +12,10 @@ namespace Editor;
 public class SkyboxEditorToolEntry : EditorTool
 {
 	private SkyboxEditorSession _session;
+	private SkyboxEditorRenderer _renderer;
+
+	[Property, Title( "Show Edges" )] public bool ShowEdges { get; set; } = false;
+	[Property, Title( "Show Vertices" )] public bool ShowVertices { get; set; } = true;
 
 	// Serialized properties for sidebar controls
 	[Property, Title( "Saturation" ), Range( 0.5f, 3.0f )] public float Saturation { get; set; } = 1.2f;
@@ -31,6 +35,7 @@ public class SkyboxEditorToolEntry : EditorTool
 	public override void OnEnabled()
 	{
 		_session = new SkyboxEditorSession();
+		_renderer = new SkyboxEditorRenderer();
 		FindSkyboxInScene();
 		SyncFromComponent();
 	}
@@ -80,6 +85,8 @@ public class SkyboxEditorToolEntry : EditorTool
 			var group = sidebar.AddGroup( "Display" );
 			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( SkyScale ) ) ) );
 			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( BgColor ) ) ) );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( ShowEdges ) ) ) );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( ShowVertices ) ) ) );
 		}
 
 		return sidebar;
@@ -100,12 +107,17 @@ public class SkyboxEditorToolEntry : EditorTool
 		if ( Camera != null )
 			Camera.BackgroundColor = BgColor;
 
+		// Update overlay renderer (uses SceneCustomObject internally, draws in proper render block)
+		_renderer?.Update( _session, ShowEdges, ShowVertices );
+
 		SkyboxEditorGizmos.UpdateCursor( _session );
 		SkyboxEditorGizmos.DrawOverlay( _session );
 	}
 
 	public override void OnDisabled()
 	{
+		_renderer?.Destroy();
+		_renderer = null;
 		_session = null;
 	}
 
@@ -130,12 +142,10 @@ public class SkyboxEditorToolEntry : EditorTool
 		var t = _session?.Target;
 		if ( t == null ) return;
 
-		bool dirty = false;
-
-		if ( t.ColorSaturation != Saturation ) { t.ColorSaturation = Saturation; dirty = true; }
-		if ( t.ColorBrightness != Brightness ) { t.ColorBrightness = Brightness; dirty = true; }
-		if ( t.ColorGamma != Gamma ) { t.ColorGamma = Gamma; dirty = true; }
-		if ( t.SkyboxScale != SkyScale ) { t.SkyboxScale = SkyScale; dirty = true; }
+		if ( t.ColorSaturation != Saturation ) t.ColorSaturation = Saturation;
+		if ( t.ColorBrightness != Brightness ) t.ColorBrightness = Brightness;
+		if ( t.ColorGamma != Gamma ) t.ColorGamma = Gamma;
+		if ( t.SkyboxScale != SkyScale ) t.SkyboxScale = SkyScale;
 		if ( t.BackgroundColor != BgColor ) { t.BackgroundColor = BgColor; }
 	}
 
@@ -178,7 +188,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		var path = fd.SelectedFile;
 		if ( string.IsNullOrEmpty( path ) ) return;
 
-		var content = FileSystem.Root.ReadAllText( path );
+		var content = System.IO.File.ReadAllText( path );
 		if ( string.IsNullOrEmpty( content ) )
 		{
 			Log.Warning( "Failed to read skybox file" );
@@ -207,7 +217,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		var path = fd.SelectedFile;
 		if ( string.IsNullOrEmpty( path ) ) return;
 
-		var content = FileSystem.Root.ReadAllText( path );
+		var content = System.IO.File.ReadAllText( path );
 		if ( string.IsNullOrEmpty( content ) )
 		{
 			Log.Warning( "Failed to read Spyro sky file" );

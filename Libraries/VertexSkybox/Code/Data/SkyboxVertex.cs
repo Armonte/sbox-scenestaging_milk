@@ -50,8 +50,7 @@ public struct SkyboxVertex
 	public SkyboxVertex( Vector3 position, Color32 color, byte selectionGroup = 0, byte layerDepth = 0 )
 	{
 		Position = position;
-		// Swap R and B for GPU BGRA byte order
-		Color = new Color32( color.b, color.g, color.r, color.a );
+		Color = color;
 		SelectionGroup = selectionGroup;
 		LayerDepth = layerDepth;
 	}
@@ -59,8 +58,7 @@ public struct SkyboxVertex
 	public SkyboxVertex( float x, float y, float z, int r, int g, int b, int flag1 = 0, int flag2 = 0 )
 	{
 		Position = new Vector3( x, y, z );
-		// Store as BGRA byte order for GPU COLOR0 semantic
-		Color = new Color32( (byte)b, (byte)g, (byte)r, 255 );
+		Color = new Color32( (byte)r, (byte)g, (byte)b, 255 );
 		SelectionGroup = (byte)flag1;
 		LayerDepth = (byte)flag2;
 	}

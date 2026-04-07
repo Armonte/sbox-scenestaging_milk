@@ -74,8 +74,7 @@ PS
 	PS_OUTPUT MainPs( PS_INPUT i )
 	{
 		PS_OUTPUT o;
-		// TEST: solid red — if you don't see red, the PS isn't running
-		o.vColor = float4( 1, 0, 0, 1 );
+		o.vColor = i.vColor;
 		return o;
 	}
 }
