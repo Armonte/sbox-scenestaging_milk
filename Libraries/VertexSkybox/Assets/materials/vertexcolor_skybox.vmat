@@ -1,0 +1,6 @@
+// Vertex Color Skybox Material
+
+Layer0
+{
+	shader "shaders/vertexcolor_sky.shader"
+}
