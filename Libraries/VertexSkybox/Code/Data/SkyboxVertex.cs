@@ -58,7 +58,9 @@ public struct SkyboxVertex
 	public SkyboxVertex( float x, float y, float z, int r, int g, int b, int flag1 = 0, int flag2 = 0 )
 	{
 		Position = new Vector3( x, y, z );
-		Color = new Color32( (byte)r, (byte)g, (byte)b, 255 );
+		// Swap R↔B for GPU RGBA format — .skye file stores visual RGB,
+		// but the GPU vertex color semantic reads bytes in BGR order
+		Color = new Color32( (byte)b, (byte)g, (byte)r, 255 );
 		SelectionGroup = (byte)flag1;
 		LayerDepth = (byte)flag2;
 	}

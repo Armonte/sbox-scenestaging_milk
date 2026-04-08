@@ -114,9 +114,10 @@ public static class SkyeFormat
 			parts.Add( v.Position.x.ToString() );
 			parts.Add( v.Position.y.ToString() );
 			parts.Add( v.Position.z.ToString() );
-			parts.Add( v.Color.r.ToString() );
-			parts.Add( v.Color.g.ToString() );
+			// Swap back R↔B when writing — data stores BGR, file expects RGB
 			parts.Add( v.Color.b.ToString() );
+			parts.Add( v.Color.g.ToString() );
+			parts.Add( v.Color.r.ToString() );
 			parts.Add( v.SelectionGroup.ToString() );
 			parts.Add( v.LayerDepth.ToString() );
 		}

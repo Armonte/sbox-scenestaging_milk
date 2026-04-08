@@ -214,8 +214,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 			var rp = sv.RenderPosition;
 			var localPos = new Vector3( -rp.x, rp.y, rp.z ) * scale;
 			var c = BoostColor( sv.Color );
-			var gpu = new Color32( c.b, c.g, c.r, c.a );
-			vertices.Add( new Vertex( localPos, gpu ) { Normal = rp.Normal } );
+			vertices.Add( new Vertex( localPos, c ) { Normal = rp.Normal } );
 		}
 
 		var indices = new List<int>( Data.Triangles.Count * 3 );

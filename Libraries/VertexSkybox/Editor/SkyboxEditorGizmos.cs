@@ -23,9 +23,18 @@ public static class SkyboxEditorGizmos
 	/// <summary>
 	/// Convert local rendered position to world space.
 	/// </summary>
+	/// <summary>
+	/// Effective scale combining SkyboxScale and the GameObject's world scale.
+	/// </summary>
+	public static float GetEffectiveScale( SkyboxComponent target )
+	{
+		return target.SkyboxScale * target.WorldScale.x;
+	}
+
 	public static Vector3 ToWorld( Vector3 local, SkyboxComponent target )
 	{
-		return target.WorldPosition + target.WorldRotation * (local * target.SkyboxScale);
+		float s = GetEffectiveScale( target );
+		return target.WorldPosition + target.WorldRotation * (local * s);
 	}
 
 	public static void UpdateCursor( SkyboxEditorSession session )
@@ -35,15 +44,15 @@ public static class SkyboxEditorGizmos
 
 		var ray = Gizmo.CurrentRay;
 		var worldPos = session.Target.WorldPosition;
-		float scale = session.Target.SkyboxScale;
-		float radius = (data.SphereRadius > 0 ? data.SphereRadius : 100f) * scale;
+		float eScale = GetEffectiveScale( session.Target );
+		float radius = (data.SphereRadius > 0 ? data.SphereRadius : 100f) * eScale;
 
 		if ( SphereConstraint.RaySphereIntersect( ray, worldPos, radius, out var hitPoint ) )
 		{
 			session.CursorOnSphere = true;
 			session.CursorWorldPosition = hitPoint;
 
-			var localHit = (hitPoint - worldPos) / scale;
+			var localHit = (hitPoint - worldPos) / eScale;
 			session.CursorPosition = localHit;
 			session.HoveredVertex = FindNearestVertex( data, localHit );
 		}
@@ -105,7 +114,7 @@ public static class SkyboxEditorGizmos
 
 			// Dot at cursor
 			Gizmo.Draw.Color = Color.White;
-			Gizmo.Draw.LineSphere( cursorWorld, 3f * target.SkyboxScale, 4 );
+			Gizmo.Draw.LineSphere( cursorWorld, 1f * GetEffectiveScale( target ), 4 );
 
 			// Brush circle
 			using ( Gizmo.Scope( "cursor" ) )
@@ -113,7 +122,7 @@ public static class SkyboxEditorGizmos
 				Gizmo.Transform = new Transform( cursorWorld, Rotation.LookAt( normal ) );
 				Gizmo.Draw.Color = Color.White.WithAlpha( 0.6f );
 				Gizmo.Draw.LineThickness = 2f;
-				Gizmo.Draw.LineCircle( 0, session.BrushRadius * target.SkyboxScale );
+				Gizmo.Draw.LineCircle( 0, session.BrushRadius * GetEffectiveScale( target ) );
 			}
 
 			// Vertices near cursor
@@ -175,10 +184,22 @@ public static class SkyboxEditorGizmos
 		if ( !session.CursorOnSphere ) return;
 		if ( session.Target?.Data == null ) return;
 
+		// Ctrl + Left click = pick color (pipette)
+		if ( Gizmo.IsCtrlPressed && Gizmo.WasLeftMousePressed )
+		{
+			if ( session.HoveredVertex >= 0 && session.HoveredVertex < session.Target.Data.Vertices.Count )
+			{
+				session.LeftColor = session.Target.Data.Vertices[session.HoveredVertex].Color;
+			}
+			return;
+		}
+
+		// Left click/drag = paint with left color
 		if ( Gizmo.IsLeftMouseDown )
 			PaintVerticesInBrush( session, session.LeftColor, session.LeftOpacity );
 
-		if ( Gizmo.IsRightMouseDown )
+		// Shift + Left click/drag = paint with right color
+		if ( Gizmo.IsShiftPressed && Gizmo.IsLeftMouseDown )
 			PaintVerticesInBrush( session, session.RightColor, session.RightOpacity );
 	}
 
@@ -198,11 +219,18 @@ public static class SkyboxEditorGizmos
 			float t = 1f - MathF.Sqrt( distSq ) / session.BrushRadius;
 			t *= opacity;
 
-			var oldColor = v.Color;
+			// Lerp in float space to avoid byte overflow
+			float or = v.Color.r / 255f;
+			float og = v.Color.g / 255f;
+			float ob = v.Color.b / 255f;
+			float nr = color.r / 255f;
+			float ng = color.g / 255f;
+			float nb = color.b / 255f;
+
 			v.Color = new Color32(
-				(byte)(oldColor.r + (color.r - oldColor.r) * t),
-				(byte)(oldColor.g + (color.g - oldColor.g) * t),
-				(byte)(oldColor.b + (color.b - oldColor.b) * t),
+				(byte)(((or + (nr - or) * t).Clamp( 0f, 1f )) * 255),
+				(byte)(((og + (ng - og) * t).Clamp( 0f, 1f )) * 255),
+				(byte)(((ob + (nb - ob) * t).Clamp( 0f, 1f )) * 255),
 				255
 			);
 
@@ -211,6 +239,9 @@ public static class SkyboxEditorGizmos
 		}
 
 		if ( changed )
+		{
+			Log.Info( $"[Paint] Painted vertices, brush={session.BrushRadius}, cursor=({cursor.x:F1},{cursor.y:F1},{cursor.z:F1})" );
 			session.Target.RebuildMesh();
+		}
 	}
 }
