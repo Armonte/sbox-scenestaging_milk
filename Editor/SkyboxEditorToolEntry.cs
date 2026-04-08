@@ -44,7 +44,7 @@ public class SkyboxEditorToolEntry : EditorTool
 	{
 		var sidebar = new ToolSidebarWidget();
 		sidebar.AddTitle( "Spyro Skybox", "cloud" );
-		sidebar.MinimumWidth = 280;
+		sidebar.MinimumWidth = 340;
 
 		var so = this.GetSerialized();
 
@@ -146,7 +146,10 @@ public class SkyboxEditorToolEntry : EditorTool
 		if ( t.ColorBrightness != Brightness ) t.ColorBrightness = Brightness;
 		if ( t.ColorGamma != Gamma ) t.ColorGamma = Gamma;
 		if ( t.SkyboxScale != SkyScale ) t.SkyboxScale = SkyScale;
-		if ( t.BackgroundColor != BgColor ) { t.BackgroundColor = BgColor; }
+		if ( t.RedShift != RedShift ) t.RedShift = RedShift;
+		if ( t.GreenShift != GreenShift ) t.GreenShift = GreenShift;
+		if ( t.BlueShift != BlueShift ) t.BlueShift = BlueShift;
+		if ( t.BackgroundColor != BgColor ) t.BackgroundColor = BgColor;
 	}
 
 	/// <summary>
@@ -161,6 +164,9 @@ public class SkyboxEditorToolEntry : EditorTool
 		Brightness = t.ColorBrightness;
 		Gamma = t.ColorGamma;
 		SkyScale = t.SkyboxScale;
+		RedShift = t.RedShift;
+		GreenShift = t.GreenShift;
+		BlueShift = t.BlueShift;
 		BgColor = t.BackgroundColor;
 	}
 

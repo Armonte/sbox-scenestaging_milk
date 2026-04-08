@@ -3,7 +3,7 @@ namespace Sandbox;
 [Title( "Spyro Skybox" )]
 [Category( "Rendering" )]
 [Icon( "cloud" )]
-public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
+public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 {
 	[Hide]
 	public SkyboxData Data { get; set; }
@@ -52,6 +52,30 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	}
 	private float _colorGamma = 2.0f;
 
+	[Property, Range( -100f, 100f ), Title( "R Shift" )]
+	public float RedShift
+	{
+		get => _redShift;
+		set { if ( _redShift != value ) { _redShift = value; RebuildMesh(); } }
+	}
+	private float _redShift = 0f;
+
+	[Property, Range( -100f, 100f ), Title( "G Shift" )]
+	public float GreenShift
+	{
+		get => _greenShift;
+		set { if ( _greenShift != value ) { _greenShift = value; RebuildMesh(); } }
+	}
+	private float _greenShift = 0f;
+
+	[Property, Range( -100f, 100f ), Title( "B Shift" )]
+	public float BlueShift
+	{
+		get => _blueShift;
+		set { if ( _blueShift != value ) { _blueShift = value; RebuildMesh(); } }
+	}
+	private float _blueShift = 0f;
+
 	[Property, Hide]
 	public string SerializedSkye { get; set; }
 
@@ -70,11 +94,27 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 
 		BuildModel();
 
+		if ( _model == null )
+		{
+			Log.Warning( "[Skybox] Failed to build model — no material or no data" );
+			return;
+		}
+
 		_sceneObject = new SceneObject( Scene.SceneWorld, _model, WorldTransform );
 		_sceneObject.Flags.CastShadows = false;
+		_sceneObject.Flags.IsOpaque = true;
+		_sceneObject.Flags.IsTranslucent = false;
+		_sceneObject.RenderingEnabled = true;
+		_sceneObject.Tags.SetFrom( Tags );
 
 		Transform.OnTransformChanged += OnTransformChanged;
 		ApplyBackgroundColor();
+	}
+
+	protected override void OnTagsChanged()
+	{
+		if ( _sceneObject != null && _sceneObject.IsValid() )
+			_sceneObject.Tags.SetFrom( Tags );
 	}
 
 	protected override void OnDisabled()
@@ -87,20 +127,26 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 
 	protected override void OnUpdate()
 	{
-		// Follow camera so skybox appears at infinity
-		if ( Game.IsPlaying && _sceneObject != null && _sceneObject.IsValid() )
-		{
-			var cam = Scene.Camera ?? Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
-			if ( cam != null )
-				_sceneObject.Transform = new Transform( cam.WorldPosition );
-		}
-
 		ApplyBackgroundColor();
+	}
+
+	/// <summary>
+	/// Runs every editor frame regardless of which tool is active.
+	/// Sets the editor viewport background color.
+	/// </summary>
+	protected override void DrawGizmos()
+	{
+		Gizmo.Draw.Color = _bgColor;
+
+		// Access the editor viewport camera through the gizmo system
+		var cam = Gizmo.Camera;
+		if ( cam.IsValid )
+			cam.BackgroundColor = _bgColor;
 	}
 
 	private void OnTransformChanged()
 	{
-		if ( _sceneObject != null && _sceneObject.IsValid() && !Game.IsPlaying )
+		if ( _sceneObject != null && _sceneObject.IsValid() )
 			_sceneObject.Transform = WorldTransform;
 	}
 
@@ -137,11 +183,17 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	public void RebuildMesh()
 	{
 		if ( Data == null ) return;
+		if ( Scene?.SceneWorld == null ) return;
 
 		BuildModel();
+		if ( _model == null ) return;
 
-		if ( _sceneObject != null && _sceneObject.IsValid() && _model != null )
-			_sceneObject.Model = _model;
+		// Recreate SceneObject with new model (setting .Model doesn't always refresh)
+		var oldTransform = _sceneObject?.Transform ?? WorldTransform;
+		_sceneObject?.Delete();
+		_sceneObject = new SceneObject( Scene.SceneWorld, _model, oldTransform );
+		_sceneObject.Flags.CastShadows = false;
+		_sceneObject.Tags.SetFrom( Tags );
 	}
 
 	private void BuildModel()
@@ -189,6 +241,11 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 	{
 		foreach ( var cam in Scene.GetAllComponents<CameraComponent>() )
 			cam.BackgroundColor = _bgColor;
+
+#pragma warning disable CS0618
+		if ( Scene?.SceneWorld != null )
+			Scene.SceneWorld.ClearColor = _bgColor;
+#pragma warning restore CS0618
 	}
 
 	private Color32 BoostColor( Color32 c )
@@ -197,11 +254,18 @@ public sealed class SkyboxComponent : Component, Component.ExecuteInEditor
 		float g = c.g / 255f;
 		float b = c.b / 255f;
 
+		// Channel shift
+		r += _redShift / 255f;
+		g += _greenShift / 255f;
+		b += _blueShift / 255f;
+
+		// Saturation
 		float luma = r * 0.299f + g * 0.587f + b * 0.114f;
 		r = luma + (r - luma) * _colorSaturation;
 		g = luma + (g - luma) * _colorSaturation;
 		b = luma + (b - luma) * _colorSaturation;
 
+		// Brightness
 		r *= _colorBrightness;
 		g *= _colorBrightness;
 		b *= _colorBrightness;
