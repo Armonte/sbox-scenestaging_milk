@@ -12,8 +12,7 @@ namespace Editor;
 public class SkyboxEditorToolEntry : EditorTool
 {
 	private SkyboxEditorSession _session;
-	private SkyboxEditorRenderer _renderer;
-
+	private SkyboxBrushPreview _brushPreview;
 	[Property, Title( "Show Edges" )] public bool ShowEdges { get; set; } = false;
 	[Property, Title( "Show Vertices" )] public bool ShowVertices { get; set; } = true;
 
@@ -26,6 +25,10 @@ public class SkyboxEditorToolEntry : EditorTool
 	[Property, Title( "R Shift" ), Range( -100f, 100f )] public float RedShift { get; set; } = 0f;
 	[Property, Title( "G Shift" ), Range( -100f, 100f )] public float GreenShift { get; set; } = 0f;
 	[Property, Title( "B Shift" ), Range( -100f, 100f )] public float BlueShift { get; set; } = 0f;
+	[Property, Title( "Left Paint Color" )] public Color LeftPaintColor { get; set; } = Color.White;
+	[Property, Title( "Right Paint Color" )] public Color RightPaintColor { get; set; } = Color.Black;
+	[Property, Title( "Paint Opacity" ), Range( 0f, 1f )] public float PaintOpacity { get; set; } = 1f;
+	[Property, Title( "Brush Radius" ), Range( 1f, 50f )] public float BrushRadius { get; set; } = 5f;
 
 	public SkyboxEditorToolEntry()
 	{
@@ -35,7 +38,6 @@ public class SkyboxEditorToolEntry : EditorTool
 	public override void OnEnabled()
 	{
 		_session = new SkyboxEditorSession();
-		_renderer = new SkyboxEditorRenderer();
 		FindSkyboxInScene();
 		SyncFromComponent();
 	}
@@ -80,6 +82,15 @@ public class SkyboxEditorToolEntry : EditorTool
 			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( BlueShift ) ) ) );
 		}
 
+		// Paint
+		{
+			var group = sidebar.AddGroup( "Paint" );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( LeftPaintColor ) ) ) );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( RightPaintColor ) ) ) );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( PaintOpacity ) ) ) );
+			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( BrushRadius ) ) ) );
+		}
+
 		// Display
 		{
 			var group = sidebar.AddGroup( "Display" );
@@ -107,17 +118,22 @@ public class SkyboxEditorToolEntry : EditorTool
 		if ( Camera != null )
 			Camera.BackgroundColor = BgColor;
 
-		// Update overlay renderer (uses SceneCustomObject internally, draws in proper render block)
-		_renderer?.Update( _session, ShowEdges, ShowVertices );
+		// Sync paint settings to session
+		_session.BrushRadius = BrushRadius;
+		_session.LeftColor = new Color32( (byte)(LeftPaintColor.r * 255), (byte)(LeftPaintColor.g * 255), (byte)(LeftPaintColor.b * 255), 255 );
+		_session.RightColor = new Color32( (byte)(RightPaintColor.r * 255), (byte)(RightPaintColor.g * 255), (byte)(RightPaintColor.b * 255), 255 );
+		_session.LeftOpacity = PaintOpacity;
+		_session.RightOpacity = PaintOpacity;
 
 		SkyboxEditorGizmos.UpdateCursor( _session );
-		SkyboxEditorGizmos.DrawOverlay( _session );
+		SkyboxEditorGizmos.DrawOverlay( _session, ShowEdges, ShowVertices );
+		SkyboxEditorGizmos.HandleInput( _session );
 	}
 
 	public override void OnDisabled()
 	{
-		_renderer?.Destroy();
-		_renderer = null;
+		_brushPreview?.Delete();
+		_brushPreview = null;
 		_session = null;
 	}
 

@@ -140,7 +140,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 
 		// Access the editor viewport camera through the gizmo system
 		var cam = Gizmo.Camera;
-		if ( cam.IsValid )
+		if ( cam != null )
 			cam.BackgroundColor = _bgColor;
 	}
 
