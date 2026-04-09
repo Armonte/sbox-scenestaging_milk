@@ -47,6 +47,17 @@ public class SkyboxEditorToolEntry : EditorTool
 	public override IEnumerable<EditorTool> GetSubtools()
 	{
 		yield return new SkyboxPaintTool( this );
+		yield return new SkyboxPipetteTool( this );
+		yield return new SkyboxGradientTool( this );
+		yield return new SkyboxGrabTool( this );
+		yield return new SkyboxSelectTool( this );
+		yield return new SkyboxCreateTool( this );
+		yield return new SkyboxDeleteTool( this );
+		yield return new SkyboxEdgeFlipTool( this );
+		yield return new SkyboxEdgeCollapseTool( this );
+		yield return new SkyboxTriFillTool( this );
+		yield return new SkyboxAutofillTool( this );
+		yield return new SkyboxBeautifyTool( this );
 	}
 
 	public override Widget CreateToolSidebar()

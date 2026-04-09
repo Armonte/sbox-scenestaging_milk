@@ -7,6 +7,7 @@ namespace Editor;
 /// Paint tool for the skybox editor.
 /// Left-click paints with primary color, Shift+Left with secondary.
 /// Ctrl+Left picks color (pipette). Supports undo via UndoScope.
+/// Uses cursor-delta guard to prevent over-painting when mouse is still.
 /// </summary>
 [Title( "Paint" )]
 [Icon( "brush" )]
@@ -30,6 +31,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 
 		UpdateCursor();
 		DrawOverlay();
+		ConsumeMouseInput();
 
 		if ( !Session.CursorOnSphere ) return;
 
@@ -44,8 +46,8 @@ public class SkyboxPaintTool : SkyboxSubTool
 		if ( Gizmo.WasLeftMousePressed )
 			BeginStroke();
 
-		// Paint while held
-		if ( Gizmo.IsLeftMouseDown && _strokeActive )
+		// Paint while held — only when cursor moves (BaseBrushTool pattern)
+		if ( Gizmo.IsLeftMouseDown && _strokeActive && HasCursorMoved() )
 		{
 			if ( Gizmo.IsShiftPressed )
 				PaintWithColor( Session.RightColor, Session.RightOpacity );
@@ -72,9 +74,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 	{
 		_strokeActive = true;
 
-		// Snapshot current state so undo can restore it
 		Target.SaveState();
-
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Paint Stroke" )
 			.WithComponentChanges( Target )
@@ -86,16 +86,14 @@ public class SkyboxPaintTool : SkyboxSubTool
 		if ( !_strokeActive ) return;
 		_strokeActive = false;
 
-		// Capture post-stroke state
 		Target.SaveState();
-
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}
 
 	private void PaintWithColor( Color32 color, float opacity )
 	{
-		var verts = GetVerticesInBrush( Session.BrushRadius );
+		var verts = GetVerticesInBrushWithHardness( Session.BrushRadius, 0.3f );
 		if ( verts.Count == 0 ) return;
 
 		bool changed = false;
@@ -105,7 +103,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 			var v = Data.Vertices[index];
 			float t = falloff * opacity;
 
-			float or = v.Color.r / 255f;
+			float or_ = v.Color.r / 255f;
 			float og = v.Color.g / 255f;
 			float ob = v.Color.b / 255f;
 			float nr = color.r / 255f;
@@ -113,7 +111,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 			float nb = color.b / 255f;
 
 			v.Color = new Color32(
-				(byte)(((or + (nr - or) * t).Clamp( 0f, 1f )) * 255),
+				(byte)(((or_ + (nr - or_) * t).Clamp( 0f, 1f )) * 255),
 				(byte)(((og + (ng - og) * t).Clamp( 0f, 1f )) * 255),
 				(byte)(((ob + (nb - ob) * t).Clamp( 0f, 1f )) * 255),
 				255
