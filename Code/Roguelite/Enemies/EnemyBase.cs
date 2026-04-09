@@ -250,8 +250,8 @@ public class RogueliteEnemyBase : Component
 		Body.MotionEnabled = true;
 		Body.Gravity = true;
 
-		// Launch
-		Body.Velocity = direction * force * 6f + Vector3.Up * force * 0.5f;
+		// Launch — force is already scaled by weapon, just apply directly
+		Body.Velocity = direction * force + Vector3.Up * force * 0.1f;
 
 		TimeSince timeSinceStart = 0;
 
