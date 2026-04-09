@@ -23,7 +23,6 @@ public class SkyboxSelectTool : SkyboxSubTool
 	private TransformMode _mode;
 	private Vector3 _lastCursorLocal;
 	private Vector3 _selectionCenter;
-	private Vector2 _lastScreenPos;
 
 	public SkyboxSelectTool( SkyboxEditorToolEntry parent ) : base( parent ) { }
 
@@ -86,7 +85,6 @@ public class SkyboxSelectTool : SkyboxSubTool
 			_mode = TransformMode.Move;
 
 		_lastCursorLocal = Session.CursorPosition;
-		_lastScreenPos = Gizmo.CurrentRay.Position.ToScreen();
 		_selectionCenter = ComputeSelectionCenter();
 
 		Target.SaveState();

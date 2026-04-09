@@ -218,7 +218,7 @@ public class SkyboxLayerPreviewWidget : SceneRenderingWidget
 	{
 		_sceneObject?.Delete();
 		_sceneObject = null;
-		Scene?.Delete();
+		Scene?.Destroy();
 		Scene = null;
 		base.OnDestroyed();
 	}

@@ -1,5 +1,6 @@
 using Sandbox;
 using System;
+using System.Collections.Generic;
 
 namespace Editor;
 
@@ -18,6 +19,7 @@ public class SkyboxSelectionGroupTool : SkyboxSubTool
 	private IDisposable _undoScope;
 	private bool _painting;
 	private int _activeGroup = 0;
+	private HashSet<KeyCode> _keysLastFrame = new();
 
 	public SkyboxSelectionGroupTool( SkyboxEditorToolEntry parent ) : base( parent ) { }
 
@@ -40,8 +42,17 @@ public class SkyboxSelectionGroupTool : SkyboxSubTool
 		for ( int d = 0; d <= 9; d++ )
 		{
 			var key = (KeyCode)((int)KeyCode.Num0 + d);
-			if ( Application.IsKeyDown( key ) && !Application.WasKeyDown( key ) )
+			if ( Application.IsKeyDown( key ) && !_keysLastFrame.Contains( key ) )
 				_activeGroup = d;
+		}
+
+		// Track keys for next frame
+		_keysLastFrame.Clear();
+		for ( int d = 0; d <= 9; d++ )
+		{
+			var key = (KeyCode)((int)KeyCode.Num0 + d);
+			if ( Application.IsKeyDown( key ) )
+				_keysLastFrame.Add( key );
 		}
 
 		// Draw active group indicator

@@ -16,6 +16,7 @@ public class SkyboxEditorToolEntry : EditorTool
 	public SkyboxEditorSession Session { get; private set; }
 	private SkyboxBrushPreview _brushPreview;
 	private IDisposable _propertyUndoScope;
+	private HashSet<KeyCode> _keysLastFrame = new();
 	[Property, Title( "Show Edges" )] public bool ShowEdges { get; set; } = false;
 	[Property, Title( "Show Vertices" )] public bool ShowVertices { get; set; } = true;
 
@@ -209,6 +210,8 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	public override void OnUpdate()
 	{
+		if ( Session == null ) return;
+
 		if ( Session.Target == null || !Session.Target.IsValid() )
 		{
 			FindSkyboxInScene();
@@ -227,6 +230,8 @@ public class SkyboxEditorToolEntry : EditorTool
 		Session.RightColor = new Color32( (byte)(RightPaintColor.r * 255), (byte)(RightPaintColor.g * 255), (byte)(RightPaintColor.b * 255), 255 );
 		Session.LeftOpacity = PaintOpacity;
 		Session.RightOpacity = PaintOpacity;
+
+		UpdateKeyTracking();
 	}
 
 	public override void OnDisabled()
@@ -250,7 +255,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		int newLayer = (Session.CurrentLayer + direction).Clamp( 0, 5 );
 		if ( newLayer == Session.CurrentLayer ) return;
 
-		Target.SaveState();
+		Session.Target.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( direction > 0 ? "Layer Up" : "Layer Down" )
 			.WithComponentChanges( Session.Target )
@@ -265,7 +270,7 @@ public class SkyboxEditorToolEntry : EditorTool
 				data.Vertices[idx] = v;
 			}
 
-			Target.SaveState();
+			Session.Target.SaveState();
 		}
 
 		Session.CurrentLayer = newLayer;
@@ -277,7 +282,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		if ( Session?.Target?.Data == null ) return;
 
 		// Selection: Ctrl+A = Select All / Deselect All (toggle)
-		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.A ) && !Application.WasKeyDown( KeyCode.A ) )
+		if ( Gizmo.IsCtrlPressed && WasKeyJustPressed( KeyCode.A ) )
 		{
 			if ( Session.SelectedVertices.Count > 0 )
 				Session.DeselectAll();
@@ -286,34 +291,34 @@ public class SkyboxEditorToolEntry : EditorTool
 		}
 
 		// Ctrl+I = Select Inverse
-		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.I ) && !Application.WasKeyDown( KeyCode.I ) )
+		if ( Gizmo.IsCtrlPressed && WasKeyJustPressed( KeyCode.I ) )
 			Session.SelectInverse();
 
 		// Ctrl+L = Select Linked
-		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.L ) && !Application.WasKeyDown( KeyCode.L ) )
+		if ( Gizmo.IsCtrlPressed && WasKeyJustPressed( KeyCode.L ) )
 			Session.SelectLinked();
 
 		// Numpad +/- = Select More/Less
-		if ( Application.IsKeyDown( KeyCode.KeypadPlus ) && !Application.WasKeyDown( KeyCode.KeypadPlus ) )
+		if ( WasKeyJustPressed( KeyCode.BracketRight ) )
 			Session.SelectMore();
-		if ( Application.IsKeyDown( KeyCode.KeypadMinus ) && !Application.WasKeyDown( KeyCode.KeypadMinus ) )
+		if ( WasKeyJustPressed( KeyCode.BracketLeft ) )
 			Session.SelectLess();
 
 		// Ctrl+C = Copy
-		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.C ) && !Application.WasKeyDown( KeyCode.C ) )
+		if ( Gizmo.IsCtrlPressed && WasKeyJustPressed( KeyCode.C ) )
 			Session.CopySelection();
 
 		// Ctrl+V = Paste
-		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.V ) && !Application.WasKeyDown( KeyCode.V ) )
+		if ( Gizmo.IsCtrlPressed && WasKeyJustPressed( KeyCode.V ) )
 		{
-			Target.SaveState();
+			Session.Target.SaveState();
 			using ( SceneEditorSession.Active
 				.UndoScope( "Paste Geometry" )
 				.WithComponentChanges( Session.Target )
 				.Push() )
 			{
 				Session.PasteSelection();
-				Target.SaveState();
+				Session.Target.SaveState();
 			}
 			Session.Target.RebuildMesh();
 		}
@@ -339,8 +344,38 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	private void SwitchToolOnKey( KeyCode key, string toolName )
 	{
-		if ( Application.IsKeyDown( key ) && !Application.WasKeyDown( key ) )
+		if ( WasKeyJustPressed( key ) )
 			EditorToolManager.SetSubTool( toolName );
+	}
+
+	/// <summary>
+	/// Returns true if the key was just pressed this frame (down now, not down last frame).
+	/// </summary>
+	private bool WasKeyJustPressed( KeyCode key )
+	{
+		return Application.IsKeyDown( key ) && !_keysLastFrame.Contains( key );
+	}
+
+	/// <summary>
+	/// Call at the end of OnUpdate to snapshot key states for next-frame edge detection.
+	/// </summary>
+	private void UpdateKeyTracking()
+	{
+		_keysLastFrame.Clear();
+		// Track keys we use for shortcuts
+		KeyCode[] tracked = {
+			KeyCode.A, KeyCode.B, KeyCode.C, KeyCode.D, KeyCode.E, KeyCode.F,
+			KeyCode.G, KeyCode.I, KeyCode.L, KeyCode.O, KeyCode.P, KeyCode.S,
+			KeyCode.T, KeyCode.V, KeyCode.X,
+			KeyCode.Num0, KeyCode.Num1, KeyCode.Num2, KeyCode.Num3, KeyCode.Num4,
+			KeyCode.Num5, KeyCode.Num6, KeyCode.Num7, KeyCode.Num8, KeyCode.Num9,
+			KeyCode.BracketRight, KeyCode.BracketLeft
+		};
+		foreach ( var k in tracked )
+		{
+			if ( Application.IsKeyDown( k ) )
+				_keysLastFrame.Add( k );
+		}
 	}
 
 	private void FindSkyboxInScene()
@@ -553,14 +588,14 @@ public class SkyboxEditorToolEntry : EditorTool
 	{
 		if ( Session?.Target == null ) return;
 
-		Target.SaveState();
+		Session.Target.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( "New Sky" )
 			.WithComponentChanges( Session.Target )
 			.Push() )
 		{
 			Session.Target.LoadData( SphereGeometry.GenerateSphere( 100f, 12, 24 ) );
-			Target.SaveState();
+			Session.Target.SaveState();
 		}
 
 		SyncFromComponent();
@@ -580,7 +615,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		var data = Session?.Target?.Data;
 		if ( data == null ) return;
 
-		Target.SaveState();
+		Session.Target.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( "Fix Errors" )
 			.WithComponentChanges( Session.Target )
@@ -644,7 +679,7 @@ public class SkyboxEditorToolEntry : EditorTool
 			}
 
 			data.InvalidateAdjacency();
-			Target.SaveState();
+			Session.Target.SaveState();
 
 			Log.Info( $"Fix Errors: {fixes} issues fixed" );
 		}
