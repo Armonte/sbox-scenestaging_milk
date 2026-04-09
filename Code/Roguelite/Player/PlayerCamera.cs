@@ -53,6 +53,9 @@ public sealed class PlayerCamera : Component
 					cam.WorldPosition = eyePos + lookDir.Backward * ThirdPersonDistance + Vector3.Up * 40f;
 					cam.WorldRotation = lookDir;
 				}
+
+				// Tell camera to exclude "viewer" tagged objects
+				cam.RenderExcludeTags.Set( "viewer", true );
 			}
 		}
 
