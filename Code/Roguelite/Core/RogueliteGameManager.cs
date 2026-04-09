@@ -1,6 +1,7 @@
 /// <summary>
-/// Scene-level manager that handles player spawning, networking, and enemy placement.
-/// Handles lobby creation and player spawning for both host and clients.
+/// Scene-level manager that handles player spawning.
+/// Put a NetworkSession component on the same or another GameObject to create the lobby.
+/// This just handles INetworkListener for spawning players on connect.
 /// </summary>
 [Title( "Roguelite Game Manager" )]
 [Icon( "sports_esports" )]
@@ -8,17 +9,6 @@ public sealed class RogueliteGameManager : Component, Component.INetworkListener
 {
 	[Property] public GameObject PlayerPrefab { get; set; }
 	[Property] public GameObject SpawnPoint { get; set; }
-	[Property] public bool AutoCreateLobby { get; set; } = true;
-
-	protected override async Task OnLoad()
-	{
-		if ( AutoCreateLobby && !Networking.IsActive )
-		{
-			// Small delay to let scene finish loading
-			await Task.DelayRealtimeSeconds( 0.1f );
-			Networking.CreateLobby( new() );
-		}
-	}
 
 	/// <summary>
 	/// Called when a player connects (including the host).
