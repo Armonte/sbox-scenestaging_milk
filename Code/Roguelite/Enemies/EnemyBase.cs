@@ -112,6 +112,7 @@ public class RogueliteEnemyBase : Component
 
 			case EnemyBrainState.Attack:
 				Nav.Stop();
+				IsMoving = false;
 				FaceTarget();
 				if ( _attackTimer <= 0 )
 				{
@@ -211,6 +212,7 @@ public class RogueliteEnemyBase : Component
 	protected void PlayAttackAnim()
 	{
 		IsAttacking = true;
+		_attackAnimTimer = 0.8f; // Default, broadcast will override with actual duration
 		BroadcastAttackAnim();
 	}
 
