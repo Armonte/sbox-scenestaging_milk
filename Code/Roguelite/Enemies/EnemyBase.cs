@@ -8,6 +8,7 @@
 public class RogueliteEnemyBase : Component
 {
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
+	[RequireComponent] public Rigidbody Body { get; set; }
 	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
 	[RequireComponent] public FactionComponent Faction { get; set; }
 	[RequireComponent] public AggroComponent Aggro { get; set; }
@@ -30,9 +31,7 @@ public class RogueliteEnemyBase : Component
 	private float _stunTimer;
 	private SkinnedModelRenderer _model;
 
-	// Knockback state
 	private bool _inKnockback;
-	private Vector3 _knockVelocity;
 
 	protected override void OnStart()
 	{
@@ -62,8 +61,12 @@ public class RogueliteEnemyBase : Component
 
 		// Let NavMeshAgent handle position — it respects walls and navmesh topology
 		Nav.UpdatePosition = true;
-		Nav.UpdateRotation = false; // We handle rotation for smoother turning
+		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
+
+		// Rigidbody is kinematic normally — only goes dynamic for knockback
+		Body.MotionEnabled = false;
+		Body.Gravity = false;
 
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
@@ -79,19 +82,8 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		// Knockback takes priority over everything
-		if ( _inKnockback )
-		{
-			UpdateKnockback();
-
-			if ( CurrentTarget is not null )
-			{
-				var dirToTarget = (CurrentTarget.WorldPosition - WorldPosition).WithZ( 0 );
-				if ( dirToTarget.Length > 1f )
-					WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( dirToTarget, Vector3.Up ), Time.Delta * 2f );
-			}
-			return;
-		}
+		// Knockback is handled by async DoKnockback — just skip brain while active
+		if ( _inKnockback ) return;
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -241,34 +233,58 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
+		if ( _inKnockback ) return;
 
 		_inKnockback = true;
-		_knockVelocity = direction.WithZ( 0 ).Normal * force * 6f;
-		_knockTimer = 0f;
+		_ = DoKnockback( direction.WithZ( 0 ).Normal, force );
 	}
 
-	private float _knockTimer;
-
-	private void UpdateKnockback()
+	/// <summary>
+	/// Async knockback using Rigidbody for real physics (wall collision, sliding).
+	/// Pattern from s&box NavigationLinkTraversal.PhysicsJump.
+	/// </summary>
+	private async Task DoKnockback( Vector3 direction, float force )
 	{
-		_knockTimer += Time.Delta;
+		// Hand position to physics
+		Nav.UpdatePosition = false;
+		Body.MotionEnabled = true;
+		Body.Gravity = true;
 
-		// Tell NavAgent to move in knockback direction — it handles wall avoidance
-		var knockTarget = WorldPosition + _knockVelocity.Normal * 200f;
-		Nav.MaxSpeed = _knockVelocity.Length;
-		Nav.MoveTo( knockTarget );
+		// Launch
+		Body.Velocity = direction * force * 6f + Vector3.Up * force * 0.5f;
 
-		// Drag
-		_knockVelocity *= MathF.Pow( 0.02f, Time.Delta );
+		TimeSince timeSinceStart = 0;
 
-		// End when slow or timed out
-		if ( _knockVelocity.Length < 15f || _knockTimer > 0.8f )
+		// Wait for landing or timeout
+		while ( timeSinceStart < 1.0f )
 		{
-			_inKnockback = false;
-			_knockVelocity = Vector3.Zero;
-			Nav.MaxSpeed = MoveSpeed;
-			Nav.Stop();
+			if ( !IsValid || Health.IsDead ) return;
+
+			// Keep nav agent synced so it knows where we are
+			Nav.SetAgentPosition( WorldPosition );
+
+			// Check if we've landed (on ground and slowed down)
+			if ( timeSinceStart > 0.15f )
+			{
+				var speed = Body.Velocity.WithZ( 0 ).Length;
+				var tr = Scene.Trace.Ray( WorldPosition + Vector3.Up * 5f, WorldPosition + Vector3.Down * 20f )
+					.IgnoreGameObjectHierarchy( GameObject )
+					.Run();
+
+				if ( tr.Hit && speed < 30f )
+					break;
+			}
+
+			await Task.Frame();
 		}
+
+		// Hand back to NavAgent
+		Body.Velocity = Vector3.Zero;
+		Body.MotionEnabled = false;
+		Body.Gravity = false;
+		Nav.SetAgentPosition( WorldPosition );
+		Nav.UpdatePosition = true;
+		_inKnockback = false;
 	}
 
 	// --- Separation ---
