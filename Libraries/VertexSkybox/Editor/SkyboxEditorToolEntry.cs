@@ -158,6 +158,30 @@ public class SkyboxEditorToolEntry : EditorTool
 			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( ShowVertices ) ) ) );
 		}
 
+		// Layers
+		{
+			var group = sidebar.AddGroup( "Layer" );
+
+			var layerLabel = new Label( $"Current Layer: {Session?.CurrentLayer ?? 0}" );
+			layerLabel.Name = "layer_label";
+			layerLabel.SetStyles( "font-size: 12px; margin: 4px;" );
+			group.Add( layerLabel );
+
+			var btnRow = new Widget();
+			btnRow.Layout = Layout.Row();
+			btnRow.Layout.Spacing = 4;
+
+			var downBtn = new Button( "Layer Down", "arrow_downward" );
+			downBtn.Clicked = () => LayerMove( -1 );
+			btnRow.Layout.Add( downBtn );
+
+			var upBtn = new Button( "Layer Up", "arrow_upward" );
+			upBtn.Clicked = () => LayerMove( 1 );
+			btnRow.Layout.Add( upBtn );
+
+			group.Add( btnRow );
+		}
+
 		return sidebar;
 	}
 
@@ -190,6 +214,40 @@ public class SkyboxEditorToolEntry : EditorTool
 		_brushPreview?.Delete();
 		_brushPreview = null;
 		Session = null;
+	}
+
+	/// <summary>
+	/// Move selected vertices (and connected geometry) to a higher or lower layer.
+	/// Layers range from 0-5. Affects LayerDepth which controls parallax RenderScale.
+	/// </summary>
+	private void LayerMove( int direction )
+	{
+		var data = Session?.Target?.Data;
+		if ( data == null || Session.SelectedVertices.Count == 0 ) return;
+
+		int newLayer = (Session.CurrentLayer + direction).Clamp( 0, 5 );
+		if ( newLayer == Session.CurrentLayer ) return;
+
+		Target.SaveState();
+		using ( SceneEditorSession.Active
+			.UndoScope( direction > 0 ? "Layer Up" : "Layer Down" )
+			.WithComponentChanges( Session.Target )
+			.Push() )
+		{
+			// Move selected vertices to the new layer
+			foreach ( var idx in Session.SelectedVertices )
+			{
+				if ( idx < 0 || idx >= data.Vertices.Count ) continue;
+				var v = data.Vertices[idx];
+				v.LayerDepth = (byte)newLayer;
+				data.Vertices[idx] = v;
+			}
+
+			Target.SaveState();
+		}
+
+		Session.CurrentLayer = newLayer;
+		Session.Target.RebuildMesh();
 	}
 
 	private void HandleKeyboardShortcuts()
@@ -237,6 +295,30 @@ public class SkyboxEditorToolEntry : EditorTool
 			}
 			Session.Target.RebuildMesh();
 		}
+
+		// Tool hotkeys (only when Ctrl is NOT held, to avoid conflicting with Ctrl+shortcuts)
+		if ( !Gizmo.IsCtrlPressed && !Gizmo.IsShiftPressed )
+		{
+			SwitchToolOnKey( KeyCode.B, nameof( SkyboxPaintTool ) );
+			SwitchToolOnKey( KeyCode.I, nameof( SkyboxPipetteTool ) );
+			SwitchToolOnKey( KeyCode.G, nameof( SkyboxGradientTool ) );
+			SwitchToolOnKey( KeyCode.P, nameof( SkyboxSketchTool ) );
+			SwitchToolOnKey( KeyCode.O, nameof( SkyboxGrabTool ) );
+			SwitchToolOnKey( KeyCode.S, nameof( SkyboxSelectTool ) );
+			SwitchToolOnKey( KeyCode.C, nameof( SkyboxCreateTool ) );
+			SwitchToolOnKey( KeyCode.X, nameof( SkyboxDeleteTool ) );
+			SwitchToolOnKey( KeyCode.F, nameof( SkyboxEdgeFlipTool ) );
+			SwitchToolOnKey( KeyCode.E, nameof( SkyboxEdgeCollapseTool ) );
+			SwitchToolOnKey( KeyCode.T, nameof( SkyboxTriFillTool ) );
+			SwitchToolOnKey( KeyCode.A, nameof( SkyboxAutofillTool ) );
+			SwitchToolOnKey( KeyCode.D, nameof( SkyboxBeautifyTool ) );
+		}
+	}
+
+	private void SwitchToolOnKey( KeyCode key, string toolName )
+	{
+		if ( Application.IsKeyDown( key ) && !Application.WasKeyDown( key ) )
+			EditorToolManager.SetSubTool( toolName );
 	}
 
 	private void FindSkyboxInScene()

@@ -128,7 +128,15 @@
 - [ ] "Palette from Sky" — samples colors from vertex data into palette
 - [ ] Palette persists with .skye save/load
 
-## Keyboard Shortcuts
+## Sidebar: Layers
+- [ ] Current layer label shows "Current Layer: 0"
+- [ ] Select vertices, click "Layer Up" — verts move to layer 1, label updates
+- [ ] Click "Layer Down" — verts move back to layer 0
+- [ ] Layers range 0-5, buttons clamp at boundaries
+- [ ] Layer changes are undoable (Ctrl+Z)
+- [ ] Vertices on higher layers render further from center (parallax/RenderScale)
+
+## Keyboard Shortcuts: Selection
 - [ ] **Ctrl+A** — Select All / Deselect All (toggle)
 - [ ] **Ctrl+I** — Invert selection
 - [ ] **Ctrl+L** — Select linked (flood fill from selection)
@@ -136,6 +144,22 @@
 - [ ] **Numpad -** — Shrink selection by one ring
 - [ ] **Ctrl+C** — Copy selected geometry
 - [ ] **Ctrl+V** — Paste geometry (undoable, pasted verts auto-selected)
+
+## Keyboard Shortcuts: Tool Switching
+- [ ] **B** — Paint Brush
+- [ ] **I** — Pipette
+- [ ] **G** — Gradient
+- [ ] **P** — Sketch Pencil
+- [ ] **O** — Grab
+- [ ] **S** — Select
+- [ ] **C** — Create
+- [ ] **X** — Delete
+- [ ] **F** — Edge Flip
+- [ ] **E** — Edge Collapse
+- [ ] **T** — Triangle Fill
+- [ ] **A** — Autofill
+- [ ] **D** — Beautify
+- [ ] Hotkeys only fire without Ctrl/Shift held (no conflict with Ctrl+A etc)
 
 ## General
 - [ ] Multiple undo/redo steps work across different tool operations
