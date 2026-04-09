@@ -297,7 +297,11 @@ public class RogueliteEnemyBase : Component
 		{
 			_inKnockback = false;
 
-			// Hand position control back to NavAgent
+			// Snap to nearest valid navmesh point so the agent doesn't get stuck in walls
+			var closest = Scene.NavMesh.GetClosestPoint( BBox.FromPositionAndSize( WorldPosition, 200f ) );
+			if ( closest.HasValue )
+				WorldPosition = closest.Value;
+
 			Nav.SetAgentPosition( WorldPosition );
 			Nav.UpdatePosition = true;
 		}
