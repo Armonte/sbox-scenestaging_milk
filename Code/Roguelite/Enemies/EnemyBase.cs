@@ -85,9 +85,8 @@ public class RogueliteEnemyBase : Component
 		// LOD runs every frame (cheap — one distance check)
 		UpdateLOD();
 
-		// Everything else runs at reduced tick rate based on distance
-		// Close: every frame. Far: every 5th frame (~12hz at 60fps)
-		var tickInterval = _isClose ? 1 : 5;
+		// Reduced tick rate — close: ~16hz, far: ~8hz (at 60fps)
+		var tickInterval = _isClose ? 4 : 8;
 		var shouldTick = _lodFrameCounter % tickInterval == 0;
 
 		if ( _shouldAnimate && shouldTick )
@@ -141,16 +140,34 @@ public class RogueliteEnemyBase : Component
 
 		Brain.Tick();
 
-		// Only Chase and Flee need NavAgent active — everything else disables it
+		// Nav budget — only closest MaxNavAgents get real pathfinding
 		var needsNav = Brain.State == EnemyBrainState.Chase || Brain.State == EnemyBrainState.Flee;
 
-		if ( needsNav && Nav.IsValid() && !Nav.Enabled )
+		if ( needsNav && !_hasNavBudget && _activeNavAgents < MaxNavAgents && _isClose )
 		{
-			Nav.Enabled = true;
-			Nav.SetAgentPosition( WorldPosition );
+			// Claim a nav slot
+			_hasNavBudget = true;
+			_activeNavAgents++;
+			if ( Nav.IsValid() && !Nav.Enabled )
+			{
+				Nav.Enabled = true;
+				Nav.SetAgentPosition( WorldPosition );
+			}
 		}
-		else if ( !needsNav && Nav.IsValid() && Nav.Enabled )
+		else if ( !needsNav && _hasNavBudget )
 		{
+			// Release nav slot
+			_hasNavBudget = false;
+			_activeNavAgents--;
+			if ( Nav.IsValid() && Nav.Enabled )
+			{
+				Nav.Stop();
+				Nav.Enabled = false;
+			}
+		}
+		else if ( needsNav && !_hasNavBudget && Nav.IsValid() && Nav.Enabled )
+		{
+			// Over budget — disable nav
 			Nav.Stop();
 			Nav.Enabled = false;
 		}
@@ -161,7 +178,10 @@ public class RogueliteEnemyBase : Component
 				break;
 
 			case EnemyBrainState.Chase:
-				ChaseTarget();
+				if ( _hasNavBudget )
+					ChaseTarget();
+				else
+					DumbChase();
 				break;
 
 			case EnemyBrainState.Attack:
@@ -186,6 +206,23 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Movement ---
+
+	/// <summary>
+	/// Dumb chase — walk directly toward player without navmesh.
+	/// Used when over the nav agent budget. No wall avoidance.
+	/// </summary>
+	private void DumbChase()
+	{
+		if ( CurrentTarget is null ) return;
+
+		var dir = (CurrentTarget.WorldPosition - WorldPosition).WithZ( 0 );
+		if ( dir.Length < 1f ) return;
+
+		dir = dir.Normal;
+		WorldPosition += dir * MoveSpeed * Time.Delta;
+		WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( dir, Vector3.Up ), Time.Delta * 5f );
+		IsMoving = true;
+	}
 
 	private float _nextPathUpdate;
 
@@ -312,6 +349,13 @@ public class RogueliteEnemyBase : Component
 		if ( attacker is not null )
 			Aggro.RecordDamage( attacker.GameObject, amount );
 	}
+
+	// --- Nav Agent Budget ---
+	// Only allow N enemies to use navmesh at once. The rest do dumb movement.
+
+	private const int MaxNavAgents = 20;
+	private static int _activeNavAgents;
+	private bool _hasNavBudget;
 
 	// --- LOD ---
 
@@ -463,6 +507,13 @@ public class RogueliteEnemyBase : Component
 
 	protected virtual void OnDeath()
 	{
+		// Release nav budget
+		if ( _hasNavBudget )
+		{
+			_hasNavBudget = false;
+			_activeNavAgents--;
+		}
+
 		BroadcastDeath();
 		GameObject.Destroy();
 	}
