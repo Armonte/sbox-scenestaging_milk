@@ -244,33 +244,30 @@ public class RogueliteEnemyBase : Component
 
 		_inKnockback = true;
 		_knockVelocity = direction.WithZ( 0 ).Normal * force * 6f;
-
-		Nav.UpdatePosition = false;
-		Nav.Stop();
+		_knockTimer = 0f;
 	}
+
+	private float _knockTimer;
 
 	private void UpdateKnockback()
 	{
-		var movement = _knockVelocity * Time.Delta;
+		_knockTimer += Time.Delta;
 
-		// Move, then clamp to nearest navmesh point each frame — smooth, no wall penetration
-		var desired = WorldPosition + movement;
+		// Tell NavAgent to move in knockback direction — it handles wall avoidance
+		var knockTarget = WorldPosition + _knockVelocity.Normal * 200f;
+		Nav.MaxSpeed = _knockVelocity.Length;
+		Nav.MoveTo( knockTarget );
 
-		var valid = Scene.NavMesh.GetClosestPoint( BBox.FromPositionAndSize( desired, Nav.Radius * 4f ) );
-		if ( valid.HasValue )
-			WorldPosition = valid.Value;
-		else
-			WorldPosition = desired; // Fallback if no navmesh nearby
+		// Drag
+		_knockVelocity *= MathF.Pow( 0.02f, Time.Delta );
 
-		// Fast drag — punchy, not floaty
-		_knockVelocity *= MathF.Pow( 0.01f, Time.Delta );
-
-		if ( _knockVelocity.Length < 10f )
+		// End when slow or timed out
+		if ( _knockVelocity.Length < 15f || _knockTimer > 0.8f )
 		{
 			_inKnockback = false;
 			_knockVelocity = Vector3.Zero;
-			Nav.SetAgentPosition( WorldPosition );
-			Nav.UpdatePosition = true;
+			Nav.MaxSpeed = MoveSpeed;
+			Nav.Stop();
 		}
 	}
 
