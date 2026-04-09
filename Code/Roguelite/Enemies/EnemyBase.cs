@@ -19,6 +19,7 @@ public class RogueliteEnemyBase : Component
 	[Property] public float AttackCooldown { get; set; } = 1.5f;
 	[Property] public float MoveSpeed { get; set; } = 150f;
 	[Property] public string EnemyName { get; set; } = "Enemy";
+	[Property, Title( "Passive (No AI)" )] public bool IsPassive { get; set; } = false;
 
 	[Sync] public bool IsStunned { get; set; }
 
@@ -99,6 +100,15 @@ public class RogueliteEnemyBase : Component
 		}
 
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
+
+		// Passive enemies just idle — useful for testing damage/procs
+		if ( IsPassive )
+		{
+			Nav.Stop();
+			StickToGround();
+			UpdateAnimation();
+			return;
+		}
 
 		// Let the brain compute the state
 		Brain.Tick();

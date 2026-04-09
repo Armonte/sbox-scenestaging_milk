@@ -97,10 +97,10 @@ public class FlyingEnemy : RogueliteEnemyBase
 		if ( hoverDir.Length > 30f )
 			WorldPosition += hoverDir.Normal * FlySpeed * 0.5f * Time.Delta;
 
-		var dist = WorldPosition.Distance( target.WorldPosition );
+		var horizontalDist = WorldPosition.WithZ( 0 ).Distance( target.WorldPosition.WithZ( 0 ) );
 
-		// Swoop attack if close-ish and off cooldown
-		if ( dist < 500f && _cooldowns.IsReady( "swoop" ) )
+		// Swoop attack — check horizontal distance so height doesn't prevent it
+		if ( horizontalDist < 800f && _cooldowns.IsReady( "swoop" ) )
 		{
 			StartSwoop( target );
 			return;

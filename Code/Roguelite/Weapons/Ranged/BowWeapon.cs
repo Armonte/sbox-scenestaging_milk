@@ -82,6 +82,8 @@ public sealed class BowWeapon : WeaponBase
 		}
 	}
 
+	[Property] public float KnockbackForce { get; set; } = 150f;
+
 	private void FireArrow( float damageMultiplier )
 	{
 		_isDrawing = false;
@@ -93,7 +95,9 @@ public sealed class BowWeapon : WeaponBase
 		var eyePos = Owner.WorldPosition + Vector3.Up * 64f;
 		var lookRot = camera.EyeAngles.ToRotation();
 
-		var attack = BuildAttack( damageMultiplier, DamageType.Pierce );
+		// Knockback scales with draw — quick shots barely push, full draw sends them flying
+		var kbForce = KnockbackForce * damageMultiplier;
+		var attack = BuildAttack( damageMultiplier, DamageType.Pierce, canKnockback: true, knockbackForce: kbForce );
 
 		ProjectileBase.Spawn(
 			Scene,

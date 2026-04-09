@@ -40,9 +40,12 @@ public readonly struct HitContext
 
 		if ( tr.GameObject is not null )
 		{
-			// Backstab: only if attacker is clearly behind the target (dot > 0.7)
-			// Disabled for now — enemies always face the player so it triggers randomly
-			isBackstab = false;
+			// Backstab: attack direction aligns with target's forward (we're hitting their back)
+			// Dot of (target forward) and (attack direction) > 0.5 means attacker is behind
+			var targetForward = tr.GameObject.WorldRotation.Forward.WithZ( 0 ).Normal;
+			var attackDir = tr.Direction.WithZ( 0 ).Normal;
+			var dot = Vector3.Dot( targetForward, attackDir );
+			isBackstab = dot > 0.5f; // Attacker's direction matches target's facing = hitting from behind
 
 			// Headshot: impact point is near the top of the target
 			var targetPos = tr.GameObject.WorldPosition;

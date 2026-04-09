@@ -146,6 +146,15 @@ public static class DamageResolver
 
 	private static void ApplyKnockback( GameObject target, Vector3 direction, float force )
 	{
+		// Enemies use manual position driving, not Rigidbody
+		var enemy = target.Components.Get<RogueliteEnemyBase>( FindMode.EverythingInSelfAndDescendants );
+		if ( enemy is not null )
+		{
+			enemy.ApplyKnockback( direction, force );
+			return;
+		}
+
+		// Fallback to Rigidbody for other objects (destructibles, etc)
 		var rb = target.Components.Get<Rigidbody>();
 		if ( rb.IsValid() )
 			rb.ApplyImpulse( direction.Normal * force );
