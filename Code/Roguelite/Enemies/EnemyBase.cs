@@ -64,7 +64,6 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = true;
 		Nav.UpdateRotation = false; // We handle rotation for smoother turning
 		Nav.MaxSpeed = MoveSpeed;
-		Nav.StoppingDistance = StopDistance;
 
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
@@ -127,6 +126,7 @@ public class RogueliteEnemyBase : Component
 				break;
 
 			case EnemyBrainState.Attack:
+				Nav.Stop();
 				FaceTarget();
 				if ( _attackTimer <= 0 )
 				{
