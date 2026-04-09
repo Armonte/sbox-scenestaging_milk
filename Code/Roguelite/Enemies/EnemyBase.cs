@@ -82,8 +82,12 @@ public class RogueliteEnemyBase : Component
 
 	protected override void OnUpdate()
 	{
-		// Animation runs on ALL clients
-		UpdateAnimation();
+		// LOD: disable model rendering + animation for distant enemies
+		UpdateLOD();
+
+		// Animation runs on ALL clients (but only if model is enabled)
+		if ( _model is not null && _model.Enabled )
+			UpdateAnimation();
 
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
@@ -272,6 +276,21 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( attacker is not null )
 			Aggro.RecordDamage( attacker.GameObject, amount );
+	}
+
+	// --- LOD ---
+
+	private const float AnimationCullDistance = 2000f;
+
+	private void UpdateLOD()
+	{
+		if ( _model is null ) return;
+
+		var cam = Scene.Camera;
+		if ( cam is null ) return;
+
+		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
+		_model.Enabled = distSq < AnimationCullDistance * AnimationCullDistance;
 	}
 
 	// --- Knockback ---
