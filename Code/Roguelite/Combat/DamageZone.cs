@@ -75,7 +75,7 @@ public class DamageZone : Component
 		foreach ( var target in targets )
 		{
 			var entityRoot = FindEntityRoot( target );
-			var damageable = entityRoot.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+			var damageable = entityRoot.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants );
 
 			if ( damageable is null ) continue;
 
@@ -100,7 +100,7 @@ public class DamageZone : Component
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
+			if ( current.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

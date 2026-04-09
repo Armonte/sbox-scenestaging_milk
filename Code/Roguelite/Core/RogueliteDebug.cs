@@ -185,8 +185,12 @@ public sealed class RogueliteDebug : Component
 			.UseHitboxes( false );
 
 		// Ignore every enemy and player so we only hit world geometry
-		foreach ( var health in Scene.GetAllComponents<RogueliteHealthComponent>() )
-			trace = trace.IgnoreGameObjectHierarchy( health.GameObject );
+		foreach ( var damageable in Scene.GetAllComponents<global::IDamageable>() )
+		{
+			var comp = damageable as Component;
+			if ( comp is not null )
+				trace = trace.IgnoreGameObjectHierarchy( comp.GameObject );
+		}
 
 		var tr = trace.Run();
 

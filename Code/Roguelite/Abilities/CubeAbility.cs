@@ -15,7 +15,7 @@ public sealed class CubeAbility : IAbility
 	{
 		if ( target is null ) return false;
 
-		var targetDamageable = target.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		var targetDamageable = target.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants );
 		if ( targetDamageable is null ) return false;
 
 		if ( caster.Faction != targetDamageable.Faction )
@@ -28,7 +28,7 @@ public sealed class CubeAbility : IAbility
 			Log.Info( $"[CubeAbility] Stunned {target.Name} for {EnemyStunDuration}s" );
 			return true;
 		}
-		else if ( caster.Faction.IsFriendly( targetFaction ) )
+		else if ( caster.Faction == targetDamageable.Faction )
 		{
 			// Ally: freeze + accelerate cooldowns
 			var player = target.Components.Get<RoguelitePlayer>( FindMode.EverythingInSelfAndDescendants );

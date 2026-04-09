@@ -32,12 +32,12 @@ public static class DamageResolver
 
 		targetObject = FindEntityRoot( targetObject );
 
-		var target = targetObject.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		var target = targetObject.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants );
 		if ( target is null || target.IsDead )
 			return default;
 
 		// Faction check
-		var attackerDamageable = attacker.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		var attackerDamageable = attacker.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants );
 		if ( attackerDamageable is not null )
 		{
 			if ( attackerDamageable.Faction == target.Faction )
@@ -125,7 +125,7 @@ public static class DamageResolver
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
+			if ( current.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

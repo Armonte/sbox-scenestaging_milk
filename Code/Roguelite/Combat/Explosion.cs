@@ -62,7 +62,7 @@ public static class Explosion
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
+			if ( current.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

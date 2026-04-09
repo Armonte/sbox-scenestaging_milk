@@ -5,7 +5,7 @@
 /// </summary>
 [Title( "Roguelite Enemy" )]
 [Icon( "pest_control" )]
-public class RogueliteEnemyBase : Component, IDamageable
+public class RogueliteEnemyBase : Component, global::IDamageable
 {
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
 

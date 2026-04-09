@@ -201,7 +201,7 @@ public class Beam : Component
 		GameObject best = null;
 		var bestDist = ChainRange;
 
-		foreach ( var damageable in Scene.GetAllComponents<IDamageable>() )
+		foreach ( var damageable in Scene.GetAllComponents<global::IDamageable>() )
 		{
 			if ( damageable.IsDead ) continue;
 			var obj = (damageable as Component)?.GameObject;
@@ -266,7 +266,7 @@ public class Beam : Component
 
 	private bool CanDamage( GameObject target )
 	{
-		var damageable = target.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		var damageable = target.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants );
 		if ( damageable is null ) return false;
 		if ( damageable.Faction == global::Faction.Player && !AffectsPlayers ) return false;
 		if ( damageable.Faction == global::Faction.Enemy && !AffectsEnemies ) return false;
@@ -278,7 +278,7 @@ public class Beam : Component
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
+			if ( current.Components.Get<global::IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

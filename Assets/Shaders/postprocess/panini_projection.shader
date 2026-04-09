@@ -12,7 +12,7 @@ struct VertexInput
 struct PixelInput
 {
     float2 uv : TEXCOORD0;
-    float4 pos : SV_Position;
+	float4 pos : SV_Position;
 };
 
 VS
@@ -20,7 +20,8 @@ VS
     PixelInput MainVs( VertexInput i )
     {
         PixelInput o;
-        o.pos = float4( i.pos.xy, 0.0f, 1.0f );
+
+        o.pos = float4(i.pos.xy, 0.0f, 1.0f);
         o.uv = i.uv;
         return o;
     }
@@ -29,10 +30,19 @@ VS
 PS
 {
     #include "postprocess/common.hlsl"
+    #include "postprocess/functions.hlsl"
+    #include "procedural.hlsl"
+
+    Texture2D colorBuffer < Attribute( "ColorBuffer" ); SrgbRead( true ); >;
+    float brightness< Attribute("brightness"); >;
 
     float4 MainPs( PixelInput i ) : SV_Target0
     {
-        // ABSOLUTE MINIMUM: just output solid red
-        return float4( 1, 0, 0, 1 );
+        float2 uv = CalculateViewportUv( i.uv.xy );
+        float4 color = colorBuffer.SampleLevel( g_sBilinearMirror, uv, 0 );
+
+        color.rgb *= brightness;
+
+        return color;
     }
 }

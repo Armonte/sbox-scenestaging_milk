@@ -39,7 +39,7 @@ public static class HitDetection
 		}
 
 		// Also check all components in range directly
-		foreach ( var health in scene.GetAllComponents<IDamageable>() )
+		foreach ( var health in scene.GetAllComponents<global::IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
 			var obj = (health as Component)?.GameObject;
@@ -79,7 +79,7 @@ public static class HitDetection
 		var results = new List<GameObject>();
 		var cosHalfAngle = MathF.Cos( halfAngleDegrees * MathF.PI / 180f );
 
-		foreach ( var health in scene.GetAllComponents<IDamageable>() )
+		foreach ( var health in scene.GetAllComponents<global::IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
 			var obj = (health as Component)?.GameObject;
@@ -104,7 +104,7 @@ public static class HitDetection
 	{
 		var results = new List<GameObject>();
 
-		foreach ( var health in scene.GetAllComponents<IDamageable>() )
+		foreach ( var health in scene.GetAllComponents<global::IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
 			var obj = (health as Component)?.GameObject;

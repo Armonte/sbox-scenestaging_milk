@@ -3,7 +3,7 @@
 /// </summary>
 [Title( "Roguelite Player" )]
 [Icon( "person" )]
-public sealed class RoguelitePlayer : Component, IDamageable
+public sealed class RoguelitePlayer : Component, global::IDamageable
 {
 	[RequireComponent] public PlayerMovement Movement { get; set; }
 	[RequireComponent] public PlayerCamera Camera { get; set; }
