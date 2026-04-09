@@ -85,8 +85,8 @@ public class RogueliteEnemyBase : Component
 		// LOD: disable model rendering + animation for distant enemies
 		UpdateLOD();
 
-		// Animation runs on ALL clients (but only if model is enabled)
-		if ( _model is not null && _model.Enabled )
+		// Animation runs on ALL clients — throttled by distance LOD
+		if ( _shouldAnimate )
 			UpdateAnimation();
 
 		if ( !Networking.IsHost ) return;
@@ -280,7 +280,12 @@ public class RogueliteEnemyBase : Component
 
 	// --- LOD ---
 
-	private const float AnimationCullDistance = 2000f;
+	private const float LodClose = 800f;       // Full rate
+	private const float LodMedium = 1500f;      // Every 3 frames
+	private const float LodFar = 2500f;         // Every 6 frames
+	private const float LodCull = 4000f;        // Disabled entirely
+	private int _lodFrameCounter;
+	private bool _shouldAnimate;
 
 	private void UpdateLOD()
 	{
@@ -290,7 +295,24 @@ public class RogueliteEnemyBase : Component
 		if ( cam is null ) return;
 
 		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
-		_model.Enabled = distSq < AnimationCullDistance * AnimationCullDistance;
+		_lodFrameCounter++;
+
+		if ( distSq > LodCull * LodCull )
+		{
+			_model.Enabled = false;
+			_shouldAnimate = false;
+		}
+		else
+		{
+			_model.Enabled = true;
+
+			if ( distSq < LodClose * LodClose )
+				_shouldAnimate = true; // Every frame
+			else if ( distSq < LodMedium * LodMedium )
+				_shouldAnimate = _lodFrameCounter % 3 == 0;
+			else
+				_shouldAnimate = _lodFrameCounter % 6 == 0;
+		}
 	}
 
 	// --- Knockback ---
