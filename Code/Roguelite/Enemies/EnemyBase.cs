@@ -70,6 +70,7 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
+		if ( _inKnockback ) return;
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -221,20 +222,35 @@ public class RogueliteEnemyBase : Component
 
 	// --- Knockback ---
 
+	private bool _inKnockback;
+
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
+		if ( _inKnockback ) return;
 
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( !rb.IsValid() )
-		{
-			Log.Warning( $"[Knockback] No Rigidbody on {GameObject.Name}" );
-			return;
-		}
+		if ( !rb.IsValid() ) return;
 
-		Log.Info( $"[Knockback] {GameObject.Name}: force={force}, mass={rb.PhysicsBody?.Mass}, motionEnabled={rb.MotionEnabled}, navUpdatePos={Nav.UpdatePosition}" );
+		_inKnockback = true;
+		Nav.UpdatePosition = false;
+		Nav.Stop();
+
 		rb.ApplyImpulse( direction.Normal * force );
+		_ = EndKnockbackAfterDelay();
+	}
+
+	private async Task EndKnockbackAfterDelay()
+	{
+		// Let physics run
+		await GameTask.DelaySeconds( 0.4f );
+
+		if ( !IsValid ) return;
+
+		_inKnockback = false;
+		Nav.SetAgentPosition( WorldPosition );
+		Nav.UpdatePosition = true;
 	}
 
 	// --- Separation ---
