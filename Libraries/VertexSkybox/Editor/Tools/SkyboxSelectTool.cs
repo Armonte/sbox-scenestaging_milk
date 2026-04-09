@@ -6,9 +6,10 @@ using System.Linq;
 namespace Editor;
 
 /// <summary>
-/// Select + Transform tool: RMB to select vertices, LMB to move selection.
+/// Select + Transform tool: RMB to select vertices, LMB to transform.
 /// Shift+RMB = additive, Ctrl+RMB = subtractive.
-/// Move rotates selection around sphere center, re-projects onto sphere.
+/// LMB = Move, Shift+LMB = Rotate, Ctrl+LMB = Scale.
+/// All transforms re-project onto sphere.
 /// </summary>
 [Title( "Select" )]
 [Icon( "near_me" )]
@@ -16,9 +17,13 @@ namespace Editor;
 [Order( 4 )]
 public class SkyboxSelectTool : SkyboxSubTool
 {
+	private enum TransformMode { None, Move, Rotate, Scale }
+
 	private IDisposable _undoScope;
-	private bool _moving;
+	private TransformMode _mode;
 	private Vector3 _lastCursorLocal;
+	private Vector3 _selectionCenter;
+	private Vector2 _lastScreenPos;
 
 	public SkyboxSelectTool( SkyboxEditorToolEntry parent ) : base( parent ) { }
 
@@ -26,7 +31,7 @@ public class SkyboxSelectTool : SkyboxSubTool
 
 	public override void OnDisabled()
 	{
-		EndMove();
+		EndTransform();
 	}
 
 	public override void OnUpdate()
@@ -44,15 +49,15 @@ public class SkyboxSelectTool : SkyboxSubTool
 		if ( Gizmo.WasRightMousePressed )
 			HandleSelection();
 
-		// LMB = move selected vertices
+		// LMB = transform selected vertices
 		if ( Gizmo.WasLeftMousePressed && Session.SelectedVertices.Count > 0 )
-			BeginMove();
+			BeginTransform();
 
-		if ( Gizmo.IsLeftMouseDown && _moving && HasCursorMoved() )
-			ContinueMove();
+		if ( Gizmo.IsLeftMouseDown && _mode != TransformMode.None && HasCursorMoved() )
+			ContinueTransform();
 
-		if ( Gizmo.WasLeftMouseReleased && _moving )
-			EndMove();
+		if ( Gizmo.WasLeftMouseReleased && _mode != TransformMode.None )
+			EndTransform();
 	}
 
 	private void HandleSelection()
@@ -61,33 +66,44 @@ public class SkyboxSelectTool : SkyboxSubTool
 		if ( hovered < 0 || hovered >= Data.Vertices.Count ) return;
 
 		if ( Gizmo.IsCtrlPressed )
-		{
-			// Subtractive
 			Session.SelectedVertices.Remove( hovered );
-		}
 		else if ( Gizmo.IsShiftPressed )
-		{
-			// Additive
 			Session.SelectedVertices.Add( hovered );
-		}
 		else
 		{
-			// Replace selection
 			Session.SelectedVertices.Clear();
 			Session.SelectedVertices.Add( hovered );
 		}
 	}
 
-	private void BeginMove()
+	private void BeginTransform()
 	{
-		_moving = true;
+		if ( Gizmo.IsShiftPressed )
+			_mode = TransformMode.Rotate;
+		else if ( Gizmo.IsCtrlPressed )
+			_mode = TransformMode.Scale;
+		else
+			_mode = TransformMode.Move;
+
 		_lastCursorLocal = Session.CursorPosition;
+		_lastScreenPos = Gizmo.CurrentRay.Position.ToScreen();
+		_selectionCenter = ComputeSelectionCenter();
 
 		Target.SaveState();
 		_undoScope = SceneEditorSession.Active
-			.UndoScope( "Skybox Move Vertices" )
+			.UndoScope( $"Skybox {_mode} Vertices" )
 			.WithComponentChanges( Target )
 			.Push();
+	}
+
+	private void ContinueTransform()
+	{
+		switch ( _mode )
+		{
+			case TransformMode.Move: ContinueMove(); break;
+			case TransformMode.Rotate: ContinueRotate(); break;
+			case TransformMode.Scale: ContinueScale(); break;
+		}
 	}
 
 	private void ContinueMove()
@@ -106,8 +122,7 @@ public class SkyboxSelectTool : SkyboxSubTool
 			if ( idx < 0 || idx >= Data.Vertices.Count ) continue;
 
 			var v = Data.Vertices[idx];
-			var newPos = v.Position + delta;
-			v.Position = SphereConstraint.ProjectOntoSphere( newPos, sphereRadius );
+			v.Position = SphereConstraint.ProjectOntoSphere( v.Position + delta, sphereRadius );
 			Data.Vertices[idx] = v;
 			changed = true;
 		}
@@ -116,14 +131,88 @@ public class SkyboxSelectTool : SkyboxSubTool
 			Target.RebuildMesh();
 	}
 
-	private void EndMove()
+	private void ContinueRotate()
 	{
-		if ( !_moving ) return;
-		_moving = false;
+		var cursorLocal = Session.CursorPosition;
+		var delta = cursorLocal - _lastCursorLocal;
+		_lastCursorLocal = cursorLocal;
+
+		if ( delta.LengthSquared < 0.0001f ) return;
+
+		// Rotation amount from horizontal mouse movement
+		float angle = delta.x * 0.5f;
+		var center = _selectionCenter.Normal;
+		var rotation = Rotation.FromAxis( center, angle );
+
+		float sphereRadius = Data.SphereRadius > 0 ? Data.SphereRadius : 100f;
+		bool changed = false;
+
+		foreach ( var idx in Session.SelectedVertices )
+		{
+			if ( idx < 0 || idx >= Data.Vertices.Count ) continue;
+
+			var v = Data.Vertices[idx];
+			v.Position = SphereConstraint.ProjectOntoSphere( rotation * v.Position, sphereRadius );
+			Data.Vertices[idx] = v;
+			changed = true;
+		}
+
+		if ( changed )
+			Target.RebuildMesh();
+	}
+
+	private void ContinueScale()
+	{
+		var cursorLocal = Session.CursorPosition;
+		var delta = cursorLocal - _lastCursorLocal;
+		_lastCursorLocal = cursorLocal;
+
+		if ( delta.LengthSquared < 0.0001f ) return;
+
+		// Scale factor from vertical mouse movement
+		float scaleFactor = 1f + delta.z * 0.01f;
+		scaleFactor = scaleFactor.Clamp( 0.9f, 1.1f );
+
+		float sphereRadius = Data.SphereRadius > 0 ? Data.SphereRadius : 100f;
+		bool changed = false;
+
+		foreach ( var idx in Session.SelectedVertices )
+		{
+			if ( idx < 0 || idx >= Data.Vertices.Count ) continue;
+
+			var v = Data.Vertices[idx];
+			var offset = v.Position - _selectionCenter;
+			v.Position = SphereConstraint.ProjectOntoSphere(
+				_selectionCenter + offset * scaleFactor, sphereRadius );
+			Data.Vertices[idx] = v;
+			changed = true;
+		}
+
+		if ( changed )
+			Target.RebuildMesh();
+	}
+
+	private void EndTransform()
+	{
+		if ( _mode == TransformMode.None ) return;
+		_mode = TransformMode.None;
 
 		Target.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
+	}
+
+	private Vector3 ComputeSelectionCenter()
+	{
+		var sum = Vector3.Zero;
+		int count = 0;
+		foreach ( var idx in Session.SelectedVertices )
+		{
+			if ( idx < 0 || idx >= Data.Vertices.Count ) continue;
+			sum += Data.Vertices[idx].Position;
+			count++;
+		}
+		return count > 0 ? sum / count : Vector3.Zero;
 	}
 
 	private void DrawSelection()
@@ -133,7 +222,7 @@ public class SkyboxSelectTool : SkyboxSubTool
 		using ( Gizmo.Scope( "selection_overlay" ) )
 		{
 			Gizmo.Draw.IgnoreDepth = true;
-			Gizmo.Draw.Color = new Color( 1f, 0.6f, 0f, 0.9f ); // Orange
+			Gizmo.Draw.Color = new Color( 1f, 0.6f, 0f, 0.9f );
 
 			foreach ( var idx in Session.SelectedVertices )
 			{

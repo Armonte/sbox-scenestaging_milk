@@ -51,8 +51,11 @@ public class SkyboxEditorToolEntry : EditorTool
 		yield return new SkyboxPaintTool( this );
 		yield return new SkyboxPipetteTool( this );
 		yield return new SkyboxGradientTool( this );
+		yield return new SkyboxSketchTool( this );
 		yield return new SkyboxGrabTool( this );
 		yield return new SkyboxSelectTool( this );
+		yield return new SkyboxPipetteSelectTool( this );
+		yield return new SkyboxSelectionGroupTool( this );
 		yield return new SkyboxCreateTool( this );
 		yield return new SkyboxDeleteTool( this );
 		yield return new SkyboxEdgeFlipTool( this );
@@ -77,9 +80,29 @@ public class SkyboxEditorToolEntry : EditorTool
 			loadBtn.Clicked = LoadSkyeFile;
 			group.Add( loadBtn );
 
+			var saveBtn = new Button( "Save .skye", "save" );
+			saveBtn.Clicked = SaveSkyeFile;
+			group.Add( saveBtn );
+
 			var importBtn = new Button( "Import Spyro Sky (.json)", "videogame_asset" );
 			importBtn.Clicked = ImportSpyroSky;
 			group.Add( importBtn );
+
+			var exportObjBtn = new Button( "Export OBJ", "upload" );
+			exportObjBtn.Clicked = ExportObj;
+			group.Add( exportObjBtn );
+
+			var exportPlyBtn = new Button( "Export PLY", "upload" );
+			exportPlyBtn.Clicked = ExportPly;
+			group.Add( exportPlyBtn );
+
+			var newSkyBtn = new Button( "New Sky", "add_circle" );
+			newSkyBtn.Clicked = NewSky;
+			group.Add( newSkyBtn );
+
+			var fixBtn = new Button( "Fix Errors", "build" );
+			fixBtn.Clicked = FixErrors;
+			group.Add( fixBtn );
 
 			var statsLabel = new Label( GetStatsText() );
 			statsLabel.SetStyles( "color: #888; font-size: 11px; margin: 4px;" );
@@ -147,6 +170,7 @@ public class SkyboxEditorToolEntry : EditorTool
 		}
 
 		SyncToComponent();
+		HandleKeyboardShortcuts();
 
 		if ( Camera != null )
 			Camera.BackgroundColor = BgColor;
@@ -166,6 +190,53 @@ public class SkyboxEditorToolEntry : EditorTool
 		_brushPreview?.Delete();
 		_brushPreview = null;
 		Session = null;
+	}
+
+	private void HandleKeyboardShortcuts()
+	{
+		if ( Session?.Target?.Data == null ) return;
+
+		// Selection: Ctrl+A = Select All / Deselect All (toggle)
+		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.A ) && !Application.WasKeyDown( KeyCode.A ) )
+		{
+			if ( Session.SelectedVertices.Count > 0 )
+				Session.DeselectAll();
+			else
+				Session.SelectAll();
+		}
+
+		// Ctrl+I = Select Inverse
+		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.I ) && !Application.WasKeyDown( KeyCode.I ) )
+			Session.SelectInverse();
+
+		// Ctrl+L = Select Linked
+		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.L ) && !Application.WasKeyDown( KeyCode.L ) )
+			Session.SelectLinked();
+
+		// Numpad +/- = Select More/Less
+		if ( Application.IsKeyDown( KeyCode.KeypadPlus ) && !Application.WasKeyDown( KeyCode.KeypadPlus ) )
+			Session.SelectMore();
+		if ( Application.IsKeyDown( KeyCode.KeypadMinus ) && !Application.WasKeyDown( KeyCode.KeypadMinus ) )
+			Session.SelectLess();
+
+		// Ctrl+C = Copy
+		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.C ) && !Application.WasKeyDown( KeyCode.C ) )
+			Session.CopySelection();
+
+		// Ctrl+V = Paste
+		if ( Gizmo.IsCtrlPressed && Application.IsKeyDown( KeyCode.V ) && !Application.WasKeyDown( KeyCode.V ) )
+		{
+			Target.SaveState();
+			using ( SceneEditorSession.Active
+				.UndoScope( "Paste Geometry" )
+				.WithComponentChanges( Session.Target )
+				.Push() )
+			{
+				Session.PasteSelection();
+				Target.SaveState();
+			}
+			Session.Target.RebuildMesh();
+		}
 	}
 
 	private void FindSkyboxInScene()
@@ -320,5 +391,160 @@ public class SkyboxEditorToolEntry : EditorTool
 
 		var bg = data.BackgroundColor;
 		Log.Info( $"Imported Spyro sky: {data.Vertices.Count} verts, {data.Triangles.Count} tris, bg=({bg.r},{bg.g},{bg.b})" );
+	}
+
+	private void SaveSkyeFile()
+	{
+		if ( Session?.Target?.Data == null ) return;
+
+		var fd = new FileDialog( null );
+		fd.Title = "Save Skybox";
+		fd.SetNameFilter( "Skybox Files (*.skye)" );
+
+		if ( !fd.Execute() ) return;
+
+		var path = fd.SelectedFile;
+		if ( string.IsNullOrEmpty( path ) ) return;
+
+		var content = SkyeFormat.WriteString( Session.Target.Data );
+		System.IO.File.WriteAllText( path, content );
+		Log.Info( $"Saved: {path}" );
+	}
+
+	private void ExportObj()
+	{
+		if ( Session?.Target?.Data == null ) return;
+
+		var fd = new FileDialog( null );
+		fd.Title = "Export OBJ";
+		fd.SetNameFilter( "Wavefront OBJ (*.obj)" );
+
+		if ( !fd.Execute() ) return;
+
+		var path = fd.SelectedFile;
+		if ( string.IsNullOrEmpty( path ) ) return;
+
+		MeshExporter.ExportObj( Session.Target.Data, path );
+		Log.Info( $"Exported OBJ: {path}" );
+	}
+
+	private void ExportPly()
+	{
+		if ( Session?.Target?.Data == null ) return;
+
+		var fd = new FileDialog( null );
+		fd.Title = "Export PLY";
+		fd.SetNameFilter( "Stanford PLY (*.ply)" );
+
+		if ( !fd.Execute() ) return;
+
+		var path = fd.SelectedFile;
+		if ( string.IsNullOrEmpty( path ) ) return;
+
+		MeshExporter.ExportPly( Session.Target.Data, path );
+		Log.Info( $"Exported PLY: {path}" );
+	}
+
+	private void NewSky()
+	{
+		if ( Session?.Target == null ) return;
+
+		Target.SaveState();
+		using ( SceneEditorSession.Active
+			.UndoScope( "New Sky" )
+			.WithComponentChanges( Session.Target )
+			.Push() )
+		{
+			Session.Target.LoadData( SphereGeometry.GenerateSphere( 100f, 12, 24 ) );
+			Target.SaveState();
+		}
+
+		SyncFromComponent();
+		Log.Info( "Created new blank sky" );
+	}
+
+	/// <summary>
+	/// Fix errors in the mesh data. Ported from solve_errors in the original editor:
+	/// 1. Remove self-loop edges (v1==v2)
+	/// 2. Remove duplicate edges
+	/// 3. Remove degenerate triangles (any 2 verts same)
+	/// 4. Fix reversed winding (dot(normal,centroid) &lt;= 0)
+	/// 5. Rebuild adjacency
+	/// </summary>
+	private void FixErrors()
+	{
+		var data = Session?.Target?.Data;
+		if ( data == null ) return;
+
+		Target.SaveState();
+		using ( SceneEditorSession.Active
+			.UndoScope( "Fix Errors" )
+			.WithComponentChanges( Session.Target )
+			.Push() )
+		{
+			int fixes = 0;
+
+			// 1. Remove self-loop edges
+			for ( int i = data.Edges.Count - 1; i >= 0; i-- )
+			{
+				if ( data.Edges[i].V1 == data.Edges[i].V2 )
+				{
+					data.Edges.RemoveAt( i );
+					fixes++;
+				}
+			}
+
+			// 2. Remove duplicate edges
+			var seen = new HashSet<(int, int)>();
+			for ( int i = data.Edges.Count - 1; i >= 0; i-- )
+			{
+				var key = data.Edges[i].SortedKey;
+				if ( !seen.Add( key ) )
+				{
+					data.Edges.RemoveAt( i );
+					fixes++;
+				}
+			}
+
+			// 3. Remove degenerate triangles
+			for ( int i = data.Triangles.Count - 1; i >= 0; i-- )
+			{
+				var tri = data.Triangles[i];
+				if ( tri.V0 == tri.V1 || tri.V1 == tri.V2 || tri.V0 == tri.V2 )
+				{
+					data.Triangles.RemoveAt( i );
+					fixes++;
+				}
+			}
+
+			// 4. Fix reversed winding
+			for ( int i = 0; i < data.Triangles.Count; i++ )
+			{
+				var tri = data.Triangles[i];
+				if ( tri.V0 >= data.Vertices.Count || tri.V1 >= data.Vertices.Count || tri.V2 >= data.Vertices.Count )
+					continue;
+
+				var p0 = data.Vertices[tri.V0].Position;
+				var p1 = data.Vertices[tri.V1].Position;
+				var p2 = data.Vertices[tri.V2].Position;
+
+				var normal = Vector3.Cross( p1 - p0, p2 - p0 );
+				var centroid = (p0 + p1 + p2) / 3f;
+
+				if ( Vector3.Dot( normal, centroid ) <= 1e-10f )
+				{
+					// Swap v0 and v1 to fix winding
+					data.Triangles[i] = new SkyboxTriangle( tri.V1, tri.V0, tri.V2, tri.E0, tri.E1, tri.E2 );
+					fixes++;
+				}
+			}
+
+			data.InvalidateAdjacency();
+			Target.SaveState();
+
+			Log.Info( $"Fix Errors: {fixes} issues fixed" );
+		}
+
+		Session.Target.RebuildMesh();
 	}
 }
