@@ -120,15 +120,17 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
-		// Passive enemies just idle — useful for testing damage/procs
+		// Passive enemies just idle
 		if ( IsPassive )
 		{
 			Nav.Stop();
-			UpdateAnimation();
 			return;
 		}
 
-		// Let the brain compute the state
+		// Throttle brain + navmesh by distance — distant enemies think less often
+		if ( !_shouldAnimate && _lodFrameCounter % 10 != 0 )
+			return;
+
 		Brain.Tick();
 
 		switch ( Brain.State )

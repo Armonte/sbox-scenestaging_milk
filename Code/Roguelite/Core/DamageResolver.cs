@@ -80,7 +80,7 @@ public static class DamageResolver
 		if ( attack.CanKnockback && attack.KnockbackForce > 0 )
 			ApplyKnockback( targetObject, ctx.Direction, attack.KnockbackForce );
 
-		Log.Info( $"[DamageResolver] {attacker.GameObject.Name} hit {targetObject.Name} for {dmg:F0} {attack.Type} damage{(isCrit ? " (CRIT!)" : "")}{(ctx.IsBackstab ? " (backstab)" : "")} — HP: {health.Current:F0}/{health.MaxHealth:F0}" );
+		// Log.Info( $"[DamageResolver] {attacker.GameObject.Name} hit {targetObject.Name} for {dmg:F0} {attack.Type} damage{(isCrit ? " (CRIT!)" : "")}{(ctx.IsBackstab ? " (backstab)" : "")} — HP: {health.Current:F0}/{health.MaxHealth:F0}" );
 
 		return new DamageResult( dmg, isCrit, health.IsDead, ctx );
 	}
