@@ -22,7 +22,7 @@ public sealed class PlayerCamera : Component
 		_cachedCam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
 		if ( _cachedCam.IsValid() )
 		{
-			var angles = cam.WorldRotation.Angles();
+			var angles = _cachedCam.WorldRotation.Angles();
 			angles.roll = 0;
 			EyeAngles = angles;
 		}
