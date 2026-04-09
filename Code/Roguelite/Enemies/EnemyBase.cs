@@ -277,63 +277,59 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
+		// Keep knockback grounded — no vertical launch, just horizontal push
 		_inKnockback = true;
-		_knockVelocity = direction * force * 8f;
+		_knockVelocity = direction.WithZ( 0 ).Normal * force * 4f;
 	}
 
 	private void UpdateKnockback()
 	{
-		_knockVelocity -= Vector3.Up * 800f * Time.Delta;
-
 		var movement = _knockVelocity * Time.Delta;
-		var newPos = WorldPosition + movement;
 
-		// Wall collision: trace horizontally to stop knockback at walls
+		// Wall collision: trace from current position in movement direction
 		var hzMovement = movement.WithZ( 0 );
 		if ( hzMovement.Length > 0.1f )
 		{
 			var wallTrace = Scene.Trace
-				.Ray( WorldPosition + Vector3.Up * 30f, WorldPosition + Vector3.Up * 30f + hzMovement )
-				.Size( Nav.Radius )
+				.Ray( WorldPosition + Vector3.Up * 30f, WorldPosition + Vector3.Up * 30f + hzMovement * 1.5f )
+				.Size( Nav.Radius * 0.8f )
 				.IgnoreGameObjectHierarchy( GameObject )
 				.WithoutTags( "trigger", "enemy" )
 				.Run();
 
 			if ( wallTrace.Hit )
 			{
-				// Hit a wall — stop horizontal velocity, slide along wall normal
-				newPos = wallTrace.HitPosition + wallTrace.Normal * Nav.Radius;
-				newPos = newPos.WithZ( WorldPosition.z + movement.z );
-				_knockVelocity = _knockVelocity.WithZ( _knockVelocity.z ) * 0.3f;
+				// Kill horizontal velocity on wall hit — don't reposition, just stop
+				_knockVelocity = Vector3.Zero;
+				_inKnockback = false;
+				Nav.SetAgentPosition( WorldPosition );
+				return;
 			}
 		}
 
-		// Ground trace: stick to floor and detect landing
+		var newPos = WorldPosition + hzMovement;
+
+		// Ground snap — stay on the floor, follow terrain
 		var groundTrace = Scene.Trace
-			.Ray( newPos + Vector3.Up * 50f, newPos + Vector3.Down * 500f )
+			.Ray( newPos + Vector3.Up * 50f, newPos + Vector3.Down * 200f )
 			.IgnoreGameObjectHierarchy( GameObject )
 			.WithoutTags( "trigger" )
 			.Run();
 
-		if ( groundTrace.Hit && _knockVelocity.z < 0 && newPos.z <= groundTrace.HitPosition.z )
-		{
+		if ( groundTrace.Hit )
 			newPos = newPos.WithZ( groundTrace.HitPosition.z );
-			_knockVelocity = _knockVelocity.WithZ( 0 );
-
-			if ( _knockVelocity.WithZ( 0 ).Length < 20f )
-			{
-				_inKnockback = false;
-
-				// Re-sync NavAgent — find nearest valid point on navmesh
-				Nav.SetAgentPosition( newPos );
-			}
-		}
 
 		WorldPosition = newPos;
 
-		// Horizontal drag
-		var hz = _knockVelocity.WithZ( 0 ) * 0.92f;
-		_knockVelocity = hz.WithZ( _knockVelocity.z );
+		// Horizontal drag — decelerate quickly
+		_knockVelocity *= 0.88f;
+
+		// Stop when slow enough
+		if ( _knockVelocity.Length < 15f )
+		{
+			_inKnockback = false;
+			Nav.SetAgentPosition( WorldPosition );
+		}
 	}
 
 	// --- Separation ---
