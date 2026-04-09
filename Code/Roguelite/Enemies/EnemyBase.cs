@@ -158,8 +158,22 @@ public class RogueliteEnemyBase : Component
 		var wishDir = Nav.WishVelocity;
 		if ( wishDir.Length > 1f )
 		{
-			WorldPosition += wishDir.Normal * MoveSpeed * Time.Delta;
-			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( wishDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
+			var moveDir = wishDir.Normal;
+			var moveAmount = moveDir * MoveSpeed * Time.Delta;
+			var newPos = WorldPosition + moveAmount;
+
+			// Simple wall check to avoid walking through geometry
+			var wallTrace = Scene.Trace
+				.Ray( WorldPosition + Vector3.Up * 30f, newPos + Vector3.Up * 30f )
+				.Size( Nav.Radius * 0.5f )
+				.IgnoreGameObjectHierarchy( GameObject )
+				.WithoutTags( "trigger", "enemy" )
+				.Run();
+
+			if ( !wallTrace.Hit )
+				WorldPosition = newPos;
+
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( moveDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
 		}
 
 		Nav.SetAgentPosition( WorldPosition );
@@ -178,8 +192,21 @@ public class RogueliteEnemyBase : Component
 		var wishDir = Nav.WishVelocity;
 		if ( wishDir.Length > 1f )
 		{
-			WorldPosition += wishDir.Normal * MoveSpeed * Time.Delta;
-			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( wishDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
+			var moveDir = wishDir.Normal;
+			var moveAmount = moveDir * MoveSpeed * Time.Delta;
+			var newPos = WorldPosition + moveAmount;
+
+			var wallTrace = Scene.Trace
+				.Ray( WorldPosition + Vector3.Up * 30f, newPos + Vector3.Up * 30f )
+				.Size( Nav.Radius * 0.5f )
+				.IgnoreGameObjectHierarchy( GameObject )
+				.WithoutTags( "trigger", "enemy" )
+				.Run();
+
+			if ( !wallTrace.Hit )
+				WorldPosition = newPos;
+
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( moveDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
 		}
 
 		Nav.SetAgentPosition( WorldPosition );
@@ -261,27 +288,51 @@ public class RogueliteEnemyBase : Component
 		var movement = _knockVelocity * Time.Delta;
 		var newPos = WorldPosition + movement;
 
-		var tr = Scene.Trace
+		// Wall collision: trace horizontally to stop knockback at walls
+		var hzMovement = movement.WithZ( 0 );
+		if ( hzMovement.Length > 0.1f )
+		{
+			var wallTrace = Scene.Trace
+				.Ray( WorldPosition + Vector3.Up * 30f, WorldPosition + Vector3.Up * 30f + hzMovement )
+				.Size( Nav.Radius )
+				.IgnoreGameObjectHierarchy( GameObject )
+				.WithoutTags( "trigger", "enemy" )
+				.Run();
+
+			if ( wallTrace.Hit )
+			{
+				// Hit a wall — stop horizontal velocity, slide along wall normal
+				newPos = wallTrace.HitPosition + wallTrace.Normal * Nav.Radius;
+				newPos = newPos.WithZ( WorldPosition.z + movement.z );
+				_knockVelocity = _knockVelocity.WithZ( _knockVelocity.z ) * 0.3f;
+			}
+		}
+
+		// Ground trace: stick to floor and detect landing
+		var groundTrace = Scene.Trace
 			.Ray( newPos + Vector3.Up * 50f, newPos + Vector3.Down * 500f )
 			.IgnoreGameObjectHierarchy( GameObject )
 			.WithoutTags( "trigger" )
 			.Run();
 
-		if ( tr.Hit && _knockVelocity.z < 0 && newPos.z <= tr.HitPosition.z )
+		if ( groundTrace.Hit && _knockVelocity.z < 0 && newPos.z <= groundTrace.HitPosition.z )
 		{
-			newPos = newPos.WithZ( tr.HitPosition.z );
+			newPos = newPos.WithZ( groundTrace.HitPosition.z );
 			_knockVelocity = _knockVelocity.WithZ( 0 );
 
 			if ( _knockVelocity.WithZ( 0 ).Length < 20f )
 			{
 				_inKnockback = false;
+
+				// Re-sync NavAgent — find nearest valid point on navmesh
 				Nav.SetAgentPosition( newPos );
 			}
 		}
 
 		WorldPosition = newPos;
 
-		var hz = _knockVelocity.WithZ( 0 ) * 0.95f;
+		// Horizontal drag
+		var hz = _knockVelocity.WithZ( 0 ) * 0.92f;
 		_knockVelocity = hz.WithZ( _knockVelocity.z );
 	}
 
