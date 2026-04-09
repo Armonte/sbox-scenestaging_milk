@@ -41,7 +41,6 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	public override void OnEnabled()
 	{
-		AllowGameObjectSelection = false;
 		Session = new SkyboxEditorSession();
 		FindSkyboxInScene();
 		SyncFromComponent();
