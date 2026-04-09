@@ -38,10 +38,10 @@ public class RogueliteEnemyBase : Component
 
 		Tags.Add( "enemy" );
 
-		// Static colliders don't push each other but still get hit by traces
+		// Trigger colliders don't push each other but still get hit by traces
 		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
 		{
-			col.Static = true;
+			col.IsTrigger = true;
 			col.Tags.Add( "enemy" );
 		}
 
