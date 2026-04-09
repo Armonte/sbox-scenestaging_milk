@@ -12,11 +12,14 @@ public sealed class PlayerCamera : Component
 
 	[Sync] public Angles EyeAngles { get; set; }
 
-	private const string FirstPersonHideTag = "viewer";
+	private string _hideTag;
 	private bool _bodyHidden;
 
 	protected override void OnEnabled()
 	{
+		// Unique hide tag per player instance so we only hide OUR body
+		_hideTag = $"viewer_{GameObject.Id}";
+
 		if ( IsProxy ) return;
 
 		// Initialize eye angles from current camera
@@ -64,19 +67,23 @@ public sealed class PlayerCamera : Component
 	}
 
 	/// <summary>
-	/// Hide the local player's body in first person by setting render type to ShadowsOnly.
-	/// Other players' bodies stay visible because this only runs on !IsProxy.
+	/// Hide the local player's body using the camera exclude tag.
+	/// The tag goes on OUR renderers, the exclude goes on OUR camera.
+	/// Since each client only runs this for their own player (!IsProxy),
+	/// each client's camera only excludes their own body.
 	/// </summary>
 	private void HideLocalBody( CameraComponent cam )
 	{
 		if ( _bodyHidden ) return;
 		_bodyHidden = true;
 
+		// Tag our renderers
 		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 		foreach ( var r in renderers )
-		{
-			r.RenderType = ModelRenderer.ShadowRenderType.ShadowsOnly;
-		}
+			r.Tags.Add( _hideTag );
+
+		// Tell camera to skip our tag — this only runs on the LOCAL client
+		cam.RenderExcludeTags.Add( _hideTag );
 	}
 
 	private void ShowLocalBody( CameraComponent cam )
@@ -86,9 +93,9 @@ public sealed class PlayerCamera : Component
 
 		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 		foreach ( var r in renderers )
-		{
-			r.RenderType = ModelRenderer.ShadowRenderType.On;
-		}
+			r.Tags.Remove( _hideTag );
+
+		cam.RenderExcludeTags.Remove( _hideTag );
 	}
 
 	protected override void OnDisabled()
