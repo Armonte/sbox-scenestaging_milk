@@ -103,7 +103,7 @@ public class RogueliteEnemyBase : Component
 
 		if ( IsStunned )
 		{
-			if ( Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
+			if ( Nav.IsValid() && Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
 			_stunTimer -= Time.Delta;
 			if ( _stunTimer <= 0 )
 				IsStunned = false;
@@ -115,7 +115,7 @@ public class RogueliteEnemyBase : Component
 		// Committed to attack — disable navmesh entirely, no pathfinding cost
 		if ( IsAttacking )
 		{
-			if ( Nav.Enabled )
+			if ( Nav.IsValid() && Nav.Enabled )
 			{
 				Nav.Stop();
 				Nav.Enabled = false;
@@ -123,7 +123,7 @@ public class RogueliteEnemyBase : Component
 			FaceTarget();
 			return;
 		}
-		else if ( !Nav.Enabled )
+		else if ( Nav.IsValid() && !Nav.Enabled )
 		{
 			Nav.Enabled = true;
 			Nav.SetAgentPosition( WorldPosition );
@@ -275,7 +275,7 @@ public class RogueliteEnemyBase : Component
 		IsAttacking = true;
 		_attackAnimTimer = 0.8f;
 
-		if ( _model is null ) return;
+		if ( _model is null || !_model.Enabled ) return;
 		_model.Sequence.Name = "attack";
 		_model.Sequence.Time = 0;
 		_model.Sequence.Looping = false;
@@ -378,8 +378,11 @@ public class RogueliteEnemyBase : Component
 
 			_inKnockback = false;
 			_knockbackRb = null;
-			Nav.SetAgentPosition( WorldPosition );
-			Nav.UpdatePosition = true;
+			if ( Nav.IsValid() )
+			{
+				Nav.SetAgentPosition( WorldPosition );
+				Nav.UpdatePosition = true;
+			}
 		}
 	}
 
@@ -447,7 +450,7 @@ public class RogueliteEnemyBase : Component
 
 	protected virtual void UpdateAnimation()
 	{
-		if ( _model is null ) return;
+		if ( _model is null || !_model.Enabled ) return;
 
 		// Attack anim playing — let it finish
 		if ( IsAttacking )
@@ -459,7 +462,7 @@ public class RogueliteEnemyBase : Component
 		}
 
 		// Use synced IsMoving flag so clients can animate too
-		if ( Networking.IsHost )
+		if ( Networking.IsHost && Nav.IsValid() && Nav.Enabled )
 			IsMoving = Nav.Velocity.WithZ( 0 ).Length > 5f;
 
 		string desired = IsMoving ? "walk_N" : "idle";
