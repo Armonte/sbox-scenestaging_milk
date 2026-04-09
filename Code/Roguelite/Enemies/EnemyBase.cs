@@ -243,8 +243,18 @@ public class RogueliteEnemyBase : Component
 
 	private void UpdateKnockback()
 	{
-		// Move
+		// Move horizontally
 		WorldPosition += _knockVelocity * Time.Delta;
+
+		// Stick to ground
+		var tr = Scene.Trace
+			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Down * 200f )
+			.IgnoreGameObjectHierarchy( GameObject )
+			.WithoutTags( "trigger" )
+			.Run();
+
+		if ( tr.Hit )
+			WorldPosition = WorldPosition.WithZ( tr.HitPosition.z );
 
 		// Drag
 		_knockVelocity *= 1f - Time.Delta * 5f;
