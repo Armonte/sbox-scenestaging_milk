@@ -25,7 +25,6 @@ public sealed class RogueliteGameManager : Component, Component.INetworkListener
 
 		var player = PlayerPrefab.Clone( SpawnPoint.WorldTransform );
 		player.Name = $"Player ({channel.DisplayName})";
-		player.Enabled = true; // Prefab is disabled as template — enable the clone
 		player.NetworkSpawn( channel );
 	}
 
