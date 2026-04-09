@@ -127,8 +127,9 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
-		// Throttle brain + navmesh by distance — distant enemies think less often
-		if ( !_shouldAnimate && _lodFrameCounter % 10 != 0 )
+		// Throttle brain by distance — close=every 2 frames, far=every 10
+		var brainInterval = _isClose ? 2 : 10;
+		if ( _lodFrameCounter % brainInterval != 0 )
 			return;
 
 		Brain.Tick();
@@ -179,14 +180,22 @@ public class RogueliteEnemyBase : Component
 
 	// --- Movement ---
 
+	private float _nextPathUpdate;
+
 	protected virtual void ChaseTarget()
 	{
 		if ( CurrentTarget is null ) return;
 
-		Nav.MaxSpeed = MoveSpeed;
-		Nav.MoveTo( CurrentTarget.WorldPosition );
+		// Only recompute path every 0.2-0.5s based on distance, not every frame
+		if ( Time.Now >= _nextPathUpdate )
+		{
+			Nav.MaxSpeed = MoveSpeed;
+			Nav.MoveTo( CurrentTarget.WorldPosition );
 
-		// NavAgent drives position — we just handle smooth rotation
+			// Close enemies update path more often than distant ones
+			_nextPathUpdate = Time.Now + (_isClose ? 0.2f : 0.5f);
+		}
+
 		var vel = Nav.Velocity.WithZ( 0 );
 		if ( vel.Length > 1f )
 			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( vel, Vector3.Up ), Time.Delta * 5f );
@@ -196,12 +205,17 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( CurrentTarget is null ) return;
 
-		var awayDir = (WorldPosition - CurrentTarget.WorldPosition).WithZ( 0 );
-		if ( awayDir.Length < 1f ) awayDir = Vector3.Random.WithZ( 0 );
+		if ( Time.Now >= _nextPathUpdate )
+		{
+			var awayDir = (WorldPosition - CurrentTarget.WorldPosition).WithZ( 0 );
+			if ( awayDir.Length < 1f ) awayDir = Vector3.Random.WithZ( 0 );
 
-		var fleeTarget = WorldPosition + awayDir.Normal * 400f;
-		Nav.MaxSpeed = MoveSpeed;
-		Nav.MoveTo( fleeTarget );
+			var fleeTarget = WorldPosition + awayDir.Normal * 400f;
+			Nav.MaxSpeed = MoveSpeed;
+			Nav.MoveTo( fleeTarget );
+
+			_nextPathUpdate = Time.Now + 0.3f;
+		}
 
 		var vel = Nav.Velocity.WithZ( 0 );
 		if ( vel.Length > 1f )
