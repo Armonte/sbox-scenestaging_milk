@@ -38,6 +38,8 @@ public class RogueliteEnemyBase : Component
 	{
 		Faction.Faction = global::Faction.Enemy;
 
+		Tags.Add( "enemy" );
+
 		Health.Init( Health.MaxHealth );
 		Health.OnDeath += OnDeath;
 
@@ -62,6 +64,7 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = true;
 		Nav.UpdateRotation = false; // We handle rotation for smoother turning
 		Nav.MaxSpeed = MoveSpeed;
+		Nav.StoppingDistance = StopDistance;
 
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
