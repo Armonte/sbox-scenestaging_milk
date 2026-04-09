@@ -103,11 +103,18 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		if ( !Networking.IsHost ) return;
 		if ( IsDead ) return;
 
-		// Pending damage always checks (timer-based, cheap)
+		// Timers run every frame — not throttled
 		UpdatePendingDamage();
+		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
-		// Everything below only runs at tick rate
-		if ( !shouldTick ) return;
+		if ( IsStunned )
+		{
+			_stunTimer -= Time.Delta;
+			if ( _stunTimer <= 0 )
+				IsStunned = false;
+			if ( Nav.IsValid() && Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
+			return;
+		}
 
 		if ( _inKnockback )
 		{
@@ -115,16 +122,8 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			return;
 		}
 
-		if ( IsStunned )
-		{
-			if ( Nav.IsValid() && Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
-			_stunTimer -= Time.Delta;
-			if ( _stunTimer <= 0 )
-				IsStunned = false;
-			return;
-		}
-
-		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
+		// Everything below only runs at tick rate
+		if ( !shouldTick ) return;
 
 		// Committed to attack — skip brain entirely
 		if ( IsAttacking )
