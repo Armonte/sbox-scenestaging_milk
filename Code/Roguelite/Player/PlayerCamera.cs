@@ -13,12 +13,14 @@ public sealed class PlayerCamera : Component
 
 	[Sync] public Angles EyeAngles { get; set; }
 
+	private CameraComponent _cachedCam;
+
 	protected override void OnEnabled()
 	{
 		if ( IsProxy ) return;
 
-		var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
-		if ( cam.IsValid() )
+		_cachedCam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
+		if ( _cachedCam.IsValid() )
 		{
 			var angles = cam.WorldRotation.Angles();
 			angles.roll = 0;
@@ -37,25 +39,26 @@ public sealed class PlayerCamera : Component
 			ee.roll = 0;
 			EyeAngles = ee;
 
-			var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
-			if ( cam.IsValid() )
+			if ( !_cachedCam.IsValid() )
+				_cachedCam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
+
+			if ( _cachedCam.IsValid() )
 			{
 				var lookDir = EyeAngles.ToRotation();
 				var eyePos = WorldPosition + Vector3.Up * EyeHeight;
 
 				if ( FirstPerson )
 				{
-					cam.WorldPosition = eyePos;
-					cam.WorldRotation = lookDir;
+					_cachedCam.WorldPosition = eyePos;
+					_cachedCam.WorldRotation = lookDir;
 				}
 				else
 				{
-					cam.WorldPosition = eyePos + lookDir.Backward * ThirdPersonDistance + Vector3.Up * 40f;
-					cam.WorldRotation = lookDir;
+					_cachedCam.WorldPosition = eyePos + lookDir.Backward * ThirdPersonDistance + Vector3.Up * 40f;
+					_cachedCam.WorldRotation = lookDir;
 				}
 
-				// Tell camera to exclude "viewer" tagged objects
-				cam.RenderExcludeTags.Set( "viewer", true );
+				_cachedCam.RenderExcludeTags.Set( "viewer", true );
 			}
 		}
 
