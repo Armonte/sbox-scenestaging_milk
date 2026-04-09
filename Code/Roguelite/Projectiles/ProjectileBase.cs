@@ -96,6 +96,7 @@ public class ProjectileBase : Component
 	protected virtual void OnHit( SceneTraceResult tr )
 	{
 		if ( !Networking.IsHost ) return;
+		if ( !Attacker.IsValid() ) return;
 
 		if ( ExplosionRadius > 0 )
 		{

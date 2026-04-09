@@ -41,12 +41,7 @@ public class RogueliteEnemyBase : Component
 		Health.Init( Health.MaxHealth );
 		Health.OnDeath += OnDeath;
 
-		// Wire aggro — when we take damage, record threat from the attacker
-		Health.OnDamageTakenFull += ( amount, type, attacker ) =>
-		{
-			if ( attacker is not null )
-				Aggro.RecordDamage( attacker.GameObject, amount );
-		};
+		Health.OnDamageTakenFull += OnDamageTakenFull;
 
 		_model = Components.Get<SkinnedModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 
@@ -223,6 +218,12 @@ public class RogueliteEnemyBase : Component
 		_isAttacking = true;
 		_attackAnimTimer = _model.Sequence.Duration;
 		if ( _attackAnimTimer <= 0 ) _attackAnimTimer = 0.8f;
+	}
+
+	private void OnDamageTakenFull( float amount, DamageType type, Component attacker )
+	{
+		if ( attacker is not null )
+			Aggro.RecordDamage( attacker.GameObject, amount );
 	}
 
 	// --- Knockback ---
