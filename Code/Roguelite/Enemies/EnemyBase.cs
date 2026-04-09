@@ -82,18 +82,25 @@ public class RogueliteEnemyBase : Component
 
 	protected override void OnUpdate()
 	{
-		// LOD: disable model rendering + animation for distant enemies
+		// LOD runs every frame (cheap — one distance check)
 		UpdateLOD();
 
-		// Animation runs on ALL clients — throttled by distance LOD
-		if ( _shouldAnimate )
+		// Everything else runs at reduced tick rate based on distance
+		// Close: every frame. Far: every 5th frame (~12hz at 60fps)
+		var tickInterval = _isClose ? 1 : 5;
+		var shouldTick = _lodFrameCounter % tickInterval == 0;
+
+		if ( _shouldAnimate && shouldTick )
 			UpdateAnimation();
 
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		// Timer-based updates — no async tasks
+		// Pending damage always checks (timer-based, cheap)
 		UpdatePendingDamage();
+
+		// Everything below only runs at tick rate
+		if ( !shouldTick ) return;
 
 		if ( _inKnockback )
 		{
