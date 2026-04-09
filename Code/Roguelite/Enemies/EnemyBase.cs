@@ -89,6 +89,14 @@ public class RogueliteEnemyBase : Component
 
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
+		// Committed to attack — don't move or change state until anim finishes
+		if ( IsAttacking )
+		{
+			Nav.Stop();
+			FaceTarget();
+			return;
+		}
+
 		// Passive enemies just idle — useful for testing damage/procs
 		if ( IsPassive )
 		{
