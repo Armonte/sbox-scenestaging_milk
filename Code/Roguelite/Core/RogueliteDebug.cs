@@ -233,7 +233,6 @@ public sealed class RogueliteDebug : Component
 		go.Components.Create<NavMeshAgent>();
 		go.Components.Create<RogueliteHealthComponent>();
 		go.Components.Create<FactionComponent>();
-		go.Components.Create<AggroComponent>();
 		go.Components.Create<CapsuleCollider>();
 
 		switch ( name )

@@ -10,7 +10,11 @@ public class RogueliteEnemyBase : Component
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
 	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
 	[RequireComponent] public FactionComponent Faction { get; set; }
-	[RequireComponent] public AggroComponent Aggro { get; set; }
+
+	// Inlined aggro — was a separate component, now just fields
+	[Property] public TargetStrategy AggroStrategy { get; set; } = TargetStrategy.HighestThreat;
+	private readonly Dictionary<GameObject, float> _threatTable = new();
+	private const float ThreatDecayRate = 0.998f;
 
 	[Property] public float AttackDamage { get; set; } = 25f;
 	[Property] public float AttackRange { get; set; } = 120f;
@@ -303,7 +307,72 @@ public class RogueliteEnemyBase : Component
 	private void OnDamageTakenFull( float amount, DamageType type, Component attacker )
 	{
 		if ( attacker is not null )
-			Aggro.RecordDamage( attacker.GameObject, amount );
+			RecordThreat( attacker.GameObject, amount );
+	}
+
+	// --- Inlined Aggro ---
+
+	public void RecordThreat( GameObject source, float amount )
+	{
+		if ( source is null ) return;
+		_threatTable.TryGetValue( source, out var current );
+		_threatTable[source] = current + amount;
+	}
+
+	public float GetThreat( GameObject source )
+	{
+		return _threatTable.TryGetValue( source, out var t ) ? t : 0f;
+	}
+
+	private static readonly List<GameObject> _threatKeysToRemove = new();
+
+	public void DecayThreat()
+	{
+		if ( _threatTable.Count == 0 ) return;
+
+		_threatKeysToRemove.Clear();
+		foreach ( var kvp in _threatTable )
+		{
+			if ( kvp.Value * ThreatDecayRate < 0.1f )
+				_threatKeysToRemove.Add( kvp.Key );
+		}
+
+		foreach ( var key in _threatKeysToRemove )
+			_threatTable.Remove( key );
+
+		_threatKeysToRemove.Clear();
+		foreach ( var kvp in _threatTable )
+			_threatKeysToRemove.Add( kvp.Key );
+
+		foreach ( var key in _threatKeysToRemove )
+			_threatTable[key] *= ThreatDecayRate;
+	}
+
+	public RoguelitePlayer SelectAggroTarget( List<RoguelitePlayer> candidates )
+	{
+		if ( candidates.Count == 0 ) return null;
+
+		RoguelitePlayer best = null;
+		float bestScore = float.MinValue;
+
+		foreach ( var p in candidates )
+		{
+			float score = AggroStrategy switch
+			{
+				TargetStrategy.HighestThreat => GetThreat( p.GameObject ),
+				TargetStrategy.LowestHP => -p.Health.Current,
+				TargetStrategy.Nearest => -WorldPosition.DistanceSquared( p.WorldPosition ),
+				_ => GetThreat( p.GameObject )
+			};
+
+			if ( score > bestScore )
+			{
+				bestScore = score;
+				best = p;
+			}
+		}
+
+		return best;
 	}
 
 	// --- Nav Agent Budget ---
