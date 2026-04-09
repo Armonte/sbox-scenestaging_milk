@@ -58,9 +58,10 @@ public class RogueliteEnemyBase : Component
 			_model.Sequence.Looping = true;
 		}
 
-		// We drive position ourselves — NavAgent is only for pathfinding direction
-		Nav.UpdatePosition = false;
-		Nav.UpdateRotation = false;
+		// Let NavMeshAgent handle position — it respects walls and navmesh topology
+		Nav.UpdatePosition = true;
+		Nav.UpdateRotation = false; // We handle rotation for smoother turning
+		Nav.MaxSpeed = MoveSpeed;
 
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
@@ -105,7 +106,6 @@ public class RogueliteEnemyBase : Component
 		if ( IsPassive )
 		{
 			Nav.Stop();
-			StickToGround();
 			UpdateAnimation();
 			return;
 		}
@@ -140,10 +140,6 @@ public class RogueliteEnemyBase : Component
 				break;
 		}
 
-		SeparateFromOtherEnemies();
-
-		if ( !_inKnockback )
-			StickToGround();
 		UpdateAnimation();
 	}
 
@@ -153,30 +149,13 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( CurrentTarget is null ) return;
 
+		Nav.MaxSpeed = MoveSpeed;
 		Nav.MoveTo( CurrentTarget.WorldPosition );
 
-		var wishDir = Nav.WishVelocity;
-		if ( wishDir.Length > 1f )
-		{
-			var moveDir = wishDir.Normal;
-			var moveAmount = moveDir * MoveSpeed * Time.Delta;
-			var newPos = WorldPosition + moveAmount;
-
-			// Simple wall check to avoid walking through geometry
-			var wallTrace = Scene.Trace
-				.Ray( WorldPosition + Vector3.Up * 30f, newPos + Vector3.Up * 30f )
-				.Size( Nav.Radius * 0.5f )
-				.IgnoreGameObjectHierarchy( GameObject )
-				.WithoutTags( "trigger", "enemy" )
-				.Run();
-
-			if ( !wallTrace.Hit )
-				WorldPosition = newPos;
-
-			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( moveDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
-		}
-
-		Nav.SetAgentPosition( WorldPosition );
+		// NavAgent drives position — we just handle smooth rotation
+		var vel = Nav.Velocity.WithZ( 0 );
+		if ( vel.Length > 1f )
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( vel, Vector3.Up ), Time.Delta * 5f );
 	}
 
 	protected virtual void FleeFromTarget()
@@ -187,29 +166,12 @@ public class RogueliteEnemyBase : Component
 		if ( awayDir.Length < 1f ) awayDir = Vector3.Random.WithZ( 0 );
 
 		var fleeTarget = WorldPosition + awayDir.Normal * 400f;
+		Nav.MaxSpeed = MoveSpeed;
 		Nav.MoveTo( fleeTarget );
 
-		var wishDir = Nav.WishVelocity;
-		if ( wishDir.Length > 1f )
-		{
-			var moveDir = wishDir.Normal;
-			var moveAmount = moveDir * MoveSpeed * Time.Delta;
-			var newPos = WorldPosition + moveAmount;
-
-			var wallTrace = Scene.Trace
-				.Ray( WorldPosition + Vector3.Up * 30f, newPos + Vector3.Up * 30f )
-				.Size( Nav.Radius * 0.5f )
-				.IgnoreGameObjectHierarchy( GameObject )
-				.WithoutTags( "trigger", "enemy" )
-				.Run();
-
-			if ( !wallTrace.Hit )
-				WorldPosition = newPos;
-
-			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( moveDir.WithZ( 0 ), Vector3.Up ), Time.Delta * 5f );
-		}
-
-		Nav.SetAgentPosition( WorldPosition );
+		var vel = Nav.Velocity.WithZ( 0 );
+		if ( vel.Length > 1f )
+			WorldRotation = Rotation.Lerp( WorldRotation, Rotation.LookAt( vel, Vector3.Up ), Time.Delta * 5f );
 	}
 
 	protected void FaceTarget()
@@ -277,9 +239,12 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		// Keep knockback grounded — no vertical launch, just horizontal push
 		_inKnockback = true;
 		_knockVelocity = direction.WithZ( 0 ).Normal * force * 6f;
+
+		// Take position control away from NavAgent during knockback
+		Nav.UpdatePosition = false;
+		Nav.Stop();
 	}
 
 	private void UpdateKnockback()
@@ -328,7 +293,10 @@ public class RogueliteEnemyBase : Component
 		if ( _knockVelocity.Length < 10f )
 		{
 			_inKnockback = false;
+
+			// Hand position control back to NavAgent
 			Nav.SetAgentPosition( WorldPosition );
+			Nav.UpdatePosition = true;
 		}
 	}
 
@@ -407,8 +375,8 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
-		// Pick sequence based on movement
-		var speed = Nav.WishVelocity.WithZ( 0 ).Length;
+		// Pick sequence based on actual movement
+		var speed = Nav.Velocity.WithZ( 0 ).Length;
 		string desired;
 
 		if ( speed > 5f )
