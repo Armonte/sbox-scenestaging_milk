@@ -30,7 +30,6 @@ public class RogueliteEnemyBase : Component
 	private float _stunTimer;
 	private SkinnedModelRenderer _model;
 
-	private bool _inKnockback;
 
 	protected override void OnStart()
 	{
@@ -72,11 +71,6 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		if ( _inKnockback )
-		{
-			UpdateKnockback();
-			return;
-		}
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -227,54 +221,16 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
-	// Uses CharacterController for wall/floor collision — same as player movement.
-
-	private Vector3 _knockVelocity;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		_inKnockback = true;
-		_knockVelocity = direction.WithZ( 0 ).Normal * force;
-		Nav.UpdatePosition = false;
-		Nav.Stop();
-	}
-
-	private void UpdateKnockback()
-	{
-		var cc = Components.Get<CharacterController>();
-		if ( cc is null )
+		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( rb.IsValid() )
 		{
-			// No CharacterController — fallback to raw position
-			WorldPosition += _knockVelocity * Time.Delta;
-			_knockVelocity *= 1f - Time.Delta * 5f;
-
-			if ( _knockVelocity.Length < 5f )
-			{
-				_inKnockback = false;
-				Nav.SetAgentPosition( WorldPosition );
-				Nav.UpdatePosition = true;
-			}
-			return;
-		}
-
-		// CharacterController handles walls + floor
-		cc.Velocity = _knockVelocity;
-		cc.Move();
-
-		// Drag
-		_knockVelocity *= 1f - Time.Delta * 5f;
-
-		// Done
-		if ( _knockVelocity.Length < 5f )
-		{
-			_inKnockback = false;
-			_knockVelocity = Vector3.Zero;
-			cc.Velocity = Vector3.Zero;
-			Nav.SetAgentPosition( WorldPosition );
-			Nav.UpdatePosition = true;
+			rb.ApplyImpulse( direction.Normal * force );
 		}
 	}
 
