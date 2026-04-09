@@ -57,6 +57,11 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
 
+		// Ensure rigidbody has mass for knockback impulses
+		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( rb.IsValid() && rb.PhysicsBody is not null && rb.PhysicsBody.Mass <= 0f )
+			rb.PhysicsBody.Mass = 80f;
+
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
 	}
