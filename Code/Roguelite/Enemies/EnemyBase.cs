@@ -245,17 +245,32 @@ public class RogueliteEnemyBase : Component
 	{
 		var movement = _knockVelocity * Time.Delta;
 
-		// Wall check — trace in movement direction before moving
-		var wallTrace = Scene.Trace
-			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Up * 20f + movement )
-			.Size( 16f )
-			.IgnoreGameObjectHierarchy( GameObject )
-			.WithoutTags( "trigger", "enemy" )
-			.Run();
+		// Wall check — trace at multiple heights to cover full body
+		bool blocked = false;
+		float halfHeight = Nav.Height * 0.5f;
+		float radius = Nav.Radius > 0 ? Nav.Radius : 32f;
 
-		if ( wallTrace.Hit )
+		for ( float h = 10f; h <= Nav.Height; h += halfHeight )
 		{
-			// Hit wall — stop knockback
+			var from = WorldPosition + Vector3.Up * h;
+			var to = from + movement;
+
+			var wallTrace = Scene.Trace
+				.Ray( from, to )
+				.Size( radius )
+				.IgnoreGameObjectHierarchy( GameObject )
+				.WithoutTags( "trigger", "enemy" )
+				.Run();
+
+			if ( wallTrace.Hit )
+			{
+				blocked = true;
+				break;
+			}
+		}
+
+		if ( blocked )
+		{
 			_knockVelocity = Vector3.Zero;
 		}
 		else
