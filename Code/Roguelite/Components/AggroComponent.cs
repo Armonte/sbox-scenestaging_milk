@@ -35,6 +35,8 @@ public sealed class AggroComponent : Component
 
 	public void DecayThreat()
 	{
+		if ( _threatTable.Count == 0 ) return;
+
 		_keysToRemove.Clear();
 
 		foreach ( var kvp in _threatTable )
@@ -46,7 +48,12 @@ public sealed class AggroComponent : Component
 		foreach ( var key in _keysToRemove )
 			_threatTable.Remove( key );
 
-		foreach ( var key in _threatTable.Keys )
+		// Decay remaining — iterate entries to avoid Keys allocation
+		_keysToRemove.Clear();
+		foreach ( var kvp in _threatTable )
+			_keysToRemove.Add( kvp.Key );
+
+		foreach ( var key in _keysToRemove )
 			_threatTable[key] *= DecayRate;
 	}
 
