@@ -7,7 +7,7 @@
 public sealed class PlayerCamera : Component
 {
 	[Property] public float EyeHeight { get; set; } = 64f;
-	[Property] public bool FirstPerson { get; set; } = true;
+	[Property] public bool FirstPerson { get; set; } = false;
 	[Property] public float ThirdPersonDistance { get; set; } = 300f;
 
 	[Sync] public Angles EyeAngles { get; set; }
