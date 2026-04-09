@@ -227,12 +227,16 @@ public class RogueliteEnemyBase : Component
 	[Rpc.Broadcast]
 	private void BroadcastAttackAnim()
 	{
+		// Set on all clients so UpdateAnimation doesn't override before [Sync] arrives
+		IsAttacking = true;
+		_attackAnimTimer = 0.8f;
+
 		if ( _model is null ) return;
 		_model.Sequence.Name = "attack";
 		_model.Sequence.Time = 0;
 		_model.Sequence.Looping = false;
-		_attackAnimTimer = _model.Sequence.Duration;
-		if ( _attackAnimTimer <= 0 ) _attackAnimTimer = 0.8f;
+		if ( _model.Sequence.Duration > 0 )
+			_attackAnimTimer = _model.Sequence.Duration;
 	}
 
 	private void OnDamageTakenFull( float amount, DamageType type, Component attacker )
