@@ -53,7 +53,7 @@ public class EnemyBrain
 			return;
 		}
 
-		if ( dist <= Owner.AttackRange )
+		if ( dist <= Owner.AttackRange && HasLineOfSight( target ) )
 		{
 			State = EnemyBrainState.Attack;
 		}
@@ -83,6 +83,25 @@ public class EnemyBrain
 			.Where( p => p.IsAlive )
 			.OrderBy( p => Owner.WorldPosition.Distance( p.WorldPosition ) )
 			.FirstOrDefault();
+	}
+
+	/// <summary>
+	/// Check if there's a clear line of sight to the target (no walls/floors between us).
+	/// Traces from enemy eye height to target eye height.
+	/// </summary>
+	protected bool HasLineOfSight( RoguelitePlayer target )
+	{
+		var from = Owner.WorldPosition + Vector3.Up * 40f;
+		var to = target.WorldPosition + Vector3.Up * 40f;
+
+		var tr = Owner.Scene.Trace
+			.Ray( from, to )
+			.IgnoreGameObjectHierarchy( Owner.GameObject )
+			.IgnoreGameObjectHierarchy( target.GameObject )
+			.WithoutTags( "trigger", "enemy" )
+			.Run();
+
+		return !tr.Hit;
 	}
 
 	/// <summary>
