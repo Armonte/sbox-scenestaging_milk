@@ -1,28 +1,22 @@
 /// <summary>
-/// First-person camera controller. Manages mouse look, camera positioning,
+/// Camera controller. Manages mouse look, camera positioning,
 /// and hiding the local player body in first-person mode.
+/// Uses the same "viewer" tag pattern as Facepunch's PlayerController.
 /// </summary>
 [Title( "Roguelite Camera" )]
 [Icon( "videocam" )]
 public sealed class PlayerCamera : Component
 {
 	[Property] public float EyeHeight { get; set; } = 64f;
-	[Property] public bool FirstPerson { get; set; } = false;
+	[Property] public bool FirstPerson { get; set; } = true;
 	[Property] public float ThirdPersonDistance { get; set; } = 300f;
 
 	[Sync] public Angles EyeAngles { get; set; }
 
-	private string _hideTag;
-	private bool _bodyHidden;
-
 	protected override void OnEnabled()
 	{
-		// Unique hide tag per player instance so we only hide OUR body
-		_hideTag = $"viewer_{GameObject.Id}";
-
 		if ( IsProxy ) return;
 
-		// Initialize eye angles from current camera
 		var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
 		if ( cam.IsValid() )
 		{
@@ -34,16 +28,15 @@ public sealed class PlayerCamera : Component
 
 	protected override void OnUpdate()
 	{
+		// Only the owner handles input and camera positioning
 		if ( !IsProxy )
 		{
-			// Mouse look
 			var ee = EyeAngles;
 			ee += Input.AnalogLook * 0.5f;
 			ee.pitch = ee.pitch.Clamp( -89f, 89f );
 			ee.roll = 0;
 			EyeAngles = ee;
 
-			// Position camera
 			var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
 			if ( cam.IsValid() )
 			{
@@ -54,57 +47,37 @@ public sealed class PlayerCamera : Component
 				{
 					cam.WorldPosition = eyePos;
 					cam.WorldRotation = lookDir;
-					HideLocalBody( cam );
 				}
 				else
 				{
 					cam.WorldPosition = eyePos + lookDir.Backward * ThirdPersonDistance + Vector3.Up * 40f;
 					cam.WorldRotation = lookDir;
-					ShowLocalBody( cam );
 				}
 			}
 		}
+
+		// Body visibility — same pattern as Facepunch PlayerController.
+		// Tags.Set("viewer", bool) on the body GameObject.
+		// The scene camera automatically excludes "viewer" tagged objects.
+		// Proxies always set viewer=false so other players see our body.
+		UpdateBodyVisibility();
 	}
 
 	/// <summary>
-	/// Hide the local player's body using the camera exclude tag.
-	/// The tag goes on OUR renderers, the exclude goes on OUR camera.
-	/// Since each client only runs this for their own player (!IsProxy),
-	/// each client's camera only excludes their own body.
+	/// Matches Facepunch PlayerController.UpdateBodyVisibility exactly.
+	/// Sets "viewer" tag on the body — the engine hides viewer-tagged objects from the camera.
+	/// Only the local player (!IsProxy) in first person gets tagged as viewer.
+	/// Proxies are NEVER tagged, so other clients always see our body.
 	/// </summary>
-	private void HideLocalBody( CameraComponent cam )
+	private void UpdateBodyVisibility()
 	{
-		if ( _bodyHidden ) return;
-		_bodyHidden = true;
+		bool viewer = FirstPerson && !IsProxy;
 
-		// Tag our renderers
-		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
-		foreach ( var r in renderers )
-			r.Tags.Add( _hideTag );
+		// Find the body renderer's GameObject (child "Body" or self)
+		var renderer = Components.Get<SkinnedModelRenderer>( FindMode.EverythingInSelfAndDescendants );
+		var bodyGo = renderer?.GameObject ?? GameObject;
 
-		// Tell camera to skip our tag — this only runs on the LOCAL client
-		cam.RenderExcludeTags.Add( _hideTag );
-	}
-
-	private void ShowLocalBody( CameraComponent cam )
-	{
-		if ( !_bodyHidden ) return;
-		_bodyHidden = false;
-
-		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
-		foreach ( var r in renderers )
-			r.Tags.Remove( _hideTag );
-
-		cam.RenderExcludeTags.Remove( _hideTag );
-	}
-
-	protected override void OnDisabled()
-	{
-		if ( _bodyHidden )
-		{
-			var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
-			if ( cam.IsValid() )
-				ShowLocalBody( cam );
-		}
+		if ( bodyGo.IsValid() )
+			bodyGo.Tags.Set( "viewer", viewer );
 	}
 }
