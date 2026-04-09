@@ -11,6 +11,8 @@ namespace Editor;
 /// </summary>
 [Title( "Beautify" )]
 [Icon( "auto_awesome" )]
+[Group( "3" )]
+[Order( 11 )]
 public class SkyboxBeautifyTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

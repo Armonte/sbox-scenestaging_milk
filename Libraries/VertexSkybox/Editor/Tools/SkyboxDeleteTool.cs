@@ -12,6 +12,8 @@ namespace Editor;
 /// </summary>
 [Title( "Delete" )]
 [Icon( "delete" )]
+[Group( "2" )]
+[Order( 6 )]
 public class SkyboxDeleteTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

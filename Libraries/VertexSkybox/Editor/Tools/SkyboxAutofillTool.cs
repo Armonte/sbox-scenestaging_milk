@@ -12,6 +12,8 @@ namespace Editor;
 /// </summary>
 [Title( "Autofill" )]
 [Icon( "auto_fix_high" )]
+[Group( "3" )]
+[Order( 10 )]
 public class SkyboxAutofillTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

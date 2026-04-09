@@ -11,6 +11,8 @@ namespace Editor;
 /// </summary>
 [Title( "Triangle Fill" )]
 [Icon( "change_history" )]
+[Group( "3" )]
+[Order( 9 )]
 public class SkyboxTriFillTool : SkyboxSubTool
 {
 	private List<int> _pickedVerts = new();

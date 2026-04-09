@@ -8,6 +8,8 @@ namespace Editor;
 /// </summary>
 [Title( "Pipette" )]
 [Icon( "colorize" )]
+[Group( "1" )]
+[Order( 1 )]
 public class SkyboxPipetteTool : SkyboxSubTool
 {
 	public SkyboxPipetteTool( SkyboxEditorToolEntry parent ) : base( parent ) { }

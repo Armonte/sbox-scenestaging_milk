@@ -11,6 +11,8 @@ namespace Editor;
 /// </summary>
 [Title( "Grab" )]
 [Icon( "open_with" )]
+[Group( "2" )]
+[Order( 3 )]
 public class SkyboxGrabTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

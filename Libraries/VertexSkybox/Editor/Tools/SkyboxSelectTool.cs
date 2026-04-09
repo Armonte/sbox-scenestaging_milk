@@ -12,6 +12,8 @@ namespace Editor;
 /// </summary>
 [Title( "Select" )]
 [Icon( "near_me" )]
+[Group( "2" )]
+[Order( 4 )]
 public class SkyboxSelectTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

@@ -11,6 +11,8 @@ namespace Editor;
 /// </summary>
 [Title( "Paint" )]
 [Icon( "brush" )]
+[Group( "1" )]
+[Order( 0 )]
 public class SkyboxPaintTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

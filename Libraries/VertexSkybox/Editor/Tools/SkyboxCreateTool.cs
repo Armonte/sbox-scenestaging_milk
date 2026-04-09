@@ -11,6 +11,8 @@ namespace Editor;
 /// </summary>
 [Title( "Create" )]
 [Icon( "add_circle" )]
+[Group( "2" )]
+[Order( 5 )]
 public class SkyboxCreateTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;

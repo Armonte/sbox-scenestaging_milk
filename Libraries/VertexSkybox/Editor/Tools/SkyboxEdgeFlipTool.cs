@@ -10,6 +10,8 @@ namespace Editor;
 /// </summary>
 [Title( "Edge Flip" )]
 [Icon( "swap_horiz" )]
+[Group( "3" )]
+[Order( 7 )]
 public class SkyboxEdgeFlipTool : SkyboxSubTool
 {
 	private int _hoveredEdge = -1;

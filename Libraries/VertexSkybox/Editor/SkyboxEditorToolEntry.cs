@@ -109,6 +109,21 @@ public class SkyboxEditorToolEntry : EditorTool
 			group.Add( ControlSheet.CreateRow( so.GetProperty( nameof( BrushRadius ) ) ) );
 		}
 
+		// Palette
+		{
+			var group = sidebar.AddGroup( "Palette" );
+			group.Add( new SkyboxPaletteWidget( this ) );
+
+			var genBtn = new Button( "Palette from Sky", "palette" );
+			genBtn.Clicked = () =>
+			{
+				var data = Session?.Target?.Data;
+				if ( data == null ) return;
+				SkyboxPaletteWidget.GeneratePaletteFromSky( data );
+			};
+			group.Add( genBtn );
+		}
+
 		// Display
 		{
 			var group = sidebar.AddGroup( "Display" );

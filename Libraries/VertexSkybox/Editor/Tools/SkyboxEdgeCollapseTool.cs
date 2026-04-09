@@ -12,6 +12,8 @@ namespace Editor;
 /// </summary>
 [Title( "Edge Collapse" )]
 [Icon( "compress" )]
+[Group( "3" )]
+[Order( 8 )]
 public class SkyboxEdgeCollapseTool : SkyboxSubTool
 {
 	private int _hoveredEdge = -1;

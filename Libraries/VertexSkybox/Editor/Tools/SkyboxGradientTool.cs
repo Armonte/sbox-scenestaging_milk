@@ -10,6 +10,8 @@ namespace Editor;
 /// </summary>
 [Title( "Gradient" )]
 [Icon( "gradient" )]
+[Group( "1" )]
+[Order( 2 )]
 public class SkyboxGradientTool : SkyboxSubTool
 {
 	private IDisposable _undoScope;
