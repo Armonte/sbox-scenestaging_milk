@@ -57,7 +57,7 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = true;
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
-		Nav.Separation = 0f; // Disable crowd avoidance — big perf save with many agents
+		Nav.Separation = 0.1f; // Low crowd avoidance — enough to prevent stacking, cheaper than default 0.25
 
 		// Disable rigidbody until needed for knockback — saves physics overhead
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
