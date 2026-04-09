@@ -41,6 +41,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	protected EnemyBrain Brain;
 	private float _attackTimer;
 	private float _stunTimer;
+	private bool _wantsToAttack;
 	private SkinnedModelRenderer _model;
 
 
@@ -103,7 +104,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		if ( !Networking.IsHost ) return;
 		if ( IsDead ) return;
 
-		// Timers run every frame — not throttled
+		// Timers + attack execution run every frame — not throttled
 		UpdatePendingDamage();
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
@@ -122,15 +123,25 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			return;
 		}
 
-		// Everything below only runs at tick rate
-		if ( !shouldTick ) return;
+		// Attack execution runs every frame — timer check can't be delayed by tick rate
+		if ( _wantsToAttack && _attackTimer <= 0 && !IsAttacking )
+		{
+			if ( CurrentTarget is not null && CurrentTarget.IsValid() && CurrentTarget.IsAlive )
+			{
+				PerformAttack( CurrentTarget );
+				_attackTimer = AttackCooldown;
+			}
+		}
 
-		// During attack animation — disable nav but let brain run for timer checks
+		// During attack animation — disable nav
 		if ( IsAttacking && Nav.IsValid() && Nav.Enabled )
 		{
 			Nav.Stop();
 			Nav.Enabled = false;
 		}
+
+		// Everything below only runs at tick rate
+		if ( !shouldTick ) return;
 
 		// Passive enemies just idle
 		if ( IsPassive )
@@ -165,14 +176,8 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 			case EnemyBrainState.Attack:
 				IsMoving = false;
+				_wantsToAttack = true;
 				FaceTarget();
-				if ( _attackTimer <= 0 && !IsAttacking )
-				{
-					PerformAttack( CurrentTarget );
-					// Cooldown starts NOW — runs during animation, so next attack
-					// can fire immediately after anim finishes if cooldown < anim duration
-					_attackTimer = AttackCooldown;
-				}
 				break;
 
 			case EnemyBrainState.Flee:
@@ -182,6 +187,10 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			case EnemyBrainState.Stunned:
 				break;
 		}
+
+		// Clear attack intent if brain left attack state
+		if ( Brain.State != EnemyBrainState.Attack )
+			_wantsToAttack = false;
 
 		UpdateAnimation();
 	}
