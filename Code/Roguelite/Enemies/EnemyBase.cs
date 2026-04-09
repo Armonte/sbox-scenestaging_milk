@@ -28,6 +28,12 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	[Property] public float DetectionRange { get; set; } = 1200f;
 	[Property] public float AttackCooldown { get; set; } = 0.8f;
 	[Property] public float MoveSpeed { get; set; } = 150f;
+
+	/// <summary>
+	/// Attack speed multiplier. 1.0 = normal, 2.0 = double speed (half duration).
+	/// Scales: animation playback, hit delay, attack commitment time, cooldown.
+	/// </summary>
+	[Property] public float AttackSpeed { get; set; } = 1.0f;
 	[Property] public string EnemyName { get; set; } = "Enemy";
 	[Property, Title( "Passive (No AI)" )] public bool IsPassive { get; set; } = false;
 
@@ -128,7 +134,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			if ( CurrentTarget is not null && CurrentTarget.IsValid() && CurrentTarget.IsAlive )
 			{
 				PerformAttack( CurrentTarget );
-				_attackTimer = AttackCooldown;
+				_attackTimer = AttackCooldown / AttackSpeed;
 			}
 		}
 
@@ -254,7 +260,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	protected virtual void PerformAttack( RoguelitePlayer target )
 	{
 		PlayAttackAnim();
-		_pendingDamageTimer = AttackHitDelay;
+		_pendingDamageTimer = AttackHitDelay / AttackSpeed;
 		_pendingDamageTarget = target;
 	}
 
@@ -295,23 +301,23 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	protected void PlayAttackAnim()
 	{
 		IsAttacking = true;
-		_attackAnimTimer = 0.8f; // Default, broadcast will override with actual duration
-		BroadcastAttackAnim();
+		_attackAnimTimer = 0.8f / AttackSpeed;
+		BroadcastAttackAnim( AttackSpeed );
 	}
 
 	[Rpc.Broadcast]
-	private void BroadcastAttackAnim()
+	private void BroadcastAttackAnim( float speed )
 	{
-		// Set on all clients so UpdateAnimation doesn't override before [Sync] arrives
 		IsAttacking = true;
-		_attackAnimTimer = 0.8f;
+		_attackAnimTimer = 0.8f / speed;
 
 		if ( _model is null || !_model.Enabled ) return;
 		_model.Sequence.Name = "attack";
 		_model.Sequence.Time = 0;
 		_model.Sequence.Looping = false;
+		_model.PlaybackRate = speed; // Speed up/slow down animation
 		if ( _model.Sequence.Duration > 0 )
-			_attackAnimTimer = _model.Sequence.Duration;
+			_attackAnimTimer = _model.Sequence.Duration / speed;
 	}
 
 	public void ApplyDamage( float amount, DamageType type, Component attacker )
@@ -583,7 +589,10 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		{
 			_attackAnimTimer -= Time.Delta;
 			if ( _attackAnimTimer <= 0 )
+			{
 				IsAttacking = false;
+				_model.PlaybackRate = 1f; // Reset to normal speed
+			}
 			return;
 		}
 
@@ -595,6 +604,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 		if ( _model.Sequence.Name != desired )
 		{
+			_model.PlaybackRate = 1f;
 			_model.Sequence.Name = desired;
 			_model.Sequence.Time = 0;
 			_model.Sequence.Looping = true;
