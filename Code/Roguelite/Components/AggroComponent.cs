@@ -31,14 +31,23 @@ public sealed class AggroComponent : Component
 		_threatTable[source] = current + amount;
 	}
 
+	private static readonly List<GameObject> _keysToRemove = new();
+
 	public void DecayThreat()
 	{
-		foreach ( var key in _threatTable.Keys.ToList() )
+		_keysToRemove.Clear();
+
+		foreach ( var kvp in _threatTable )
 		{
-			_threatTable[key] *= DecayRate;
-			if ( _threatTable[key] < 0.1f )
-				_threatTable.Remove( key );
+			if ( kvp.Value * DecayRate < 0.1f )
+				_keysToRemove.Add( kvp.Key );
 		}
+
+		foreach ( var key in _keysToRemove )
+			_threatTable.Remove( key );
+
+		foreach ( var key in _threatTable.Keys )
+			_threatTable[key] *= DecayRate;
 	}
 
 	public void ZeroThreat( GameObject source )
@@ -65,57 +74,32 @@ public sealed class AggroComponent : Component
 	/// Select the best target from alive players based on the configured strategy.
 	/// Returns null if no valid target found.
 	/// </summary>
-	public RoguelitePlayer SelectTarget( IEnumerable<RoguelitePlayer> candidates )
+	public RoguelitePlayer SelectTarget( List<RoguelitePlayer> candidates )
 	{
-		var alive = candidates.Where( p => p is not null && p.IsAlive ).ToList();
-		if ( alive.Count == 0 ) return null;
+		if ( candidates.Count == 0 ) return null;
 
-		return Strategy switch
-		{
-			TargetStrategy.HighestThreat => alive.OrderByDescending( p => GetThreat( p.GameObject ) ).First(),
-			TargetStrategy.LowestHP => alive.OrderBy( p => p.Health.Current ).First(),
-			TargetStrategy.LowestArmor => SelectLowestArmor( alive ),
-			TargetStrategy.Nearest => alive.OrderBy( p => WorldPosition.Distance( p.WorldPosition ) ).First(),
-			TargetStrategy.ClassPriority => SelectByClass( alive ),
-			TargetStrategy.DensestCluster => SelectDensestCluster( alive ),
-			_ => alive.OrderByDescending( p => GetThreat( p.GameObject ) ).First()
-		};
-	}
-
-	private RoguelitePlayer SelectLowestArmor( List<RoguelitePlayer> alive )
-	{
-		return alive.OrderBy( p =>
-		{
-			var armor = p.Components.Get<RogueliteArmorComponent>();
-			return armor?.BaseArmor ?? 0f;
-		} ).First();
-	}
-
-	private RoguelitePlayer SelectByClass( List<RoguelitePlayer> alive )
-	{
-		var preferred = alive.FirstOrDefault( p => p.Class == PreferredTargetClass );
-		return preferred ?? alive.OrderByDescending( p => GetThreat( p.GameObject ) ).First();
-	}
-
-	private RoguelitePlayer SelectDensestCluster( List<RoguelitePlayer> alive )
-	{
-		if ( alive.Count == 1 ) return alive[0];
-
+		// Default to highest threat — most common, no LINQ
 		RoguelitePlayer best = null;
-		var bestCount = 0;
+		float bestScore = float.MinValue;
 
-		foreach ( var candidate in alive )
+		foreach ( var p in candidates )
 		{
-			var count = alive.Count( other =>
-				candidate.WorldPosition.Distance( other.WorldPosition ) <= ClusterRadius );
-
-			if ( count > bestCount )
+			float score = Strategy switch
 			{
-				bestCount = count;
-				best = candidate;
+				TargetStrategy.HighestThreat => GetThreat( p.GameObject ),
+				TargetStrategy.LowestHP => -p.Health.Current,
+				TargetStrategy.Nearest => -WorldPosition.DistanceSquared( p.WorldPosition ),
+				TargetStrategy.ClassPriority => p.Class == PreferredTargetClass ? 1000f + GetThreat( p.GameObject ) : GetThreat( p.GameObject ),
+				_ => GetThreat( p.GameObject )
+			};
+
+			if ( score > bestScore )
+			{
+				bestScore = score;
+				best = p;
 			}
 		}
 
-		return best ?? alive[0];
+		return best;
 	}
 }

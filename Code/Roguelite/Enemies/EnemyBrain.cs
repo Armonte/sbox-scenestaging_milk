@@ -71,22 +71,47 @@ public class EnemyBrain
 		}
 	}
 
+	// Cached player list — refreshed once per frame across all enemies
+	private static int _cachedFrame;
+	private static readonly List<RoguelitePlayer> _cachedPlayers = new();
+
 	protected RoguelitePlayer SelectTarget()
 	{
-		var candidates = Owner.Scene.GetAllComponents<RoguelitePlayer>();
+		// Refresh player cache once per frame
+		var frame = (int)(Time.Now * 60);
+		if ( _cachedFrame != frame )
+		{
+			_cachedFrame = frame;
+			_cachedPlayers.Clear();
+			foreach ( var p in Owner.Scene.GetAllComponents<RoguelitePlayer>() )
+			{
+				if ( p.IsAlive )
+					_cachedPlayers.Add( p );
+			}
+		}
+
+		if ( _cachedPlayers.Count == 0 ) return null;
 
 		// Use aggro if we have threat entries
 		if ( Owner.Aggro is not null )
 		{
-			var aggroTarget = Owner.Aggro.SelectTarget( candidates );
+			var aggroTarget = Owner.Aggro.SelectTarget( _cachedPlayers );
 			if ( aggroTarget is not null ) return aggroTarget;
 		}
 
-		// Fallback: nearest alive player
-		return candidates
-			.Where( p => p.IsAlive )
-			.OrderBy( p => Owner.WorldPosition.Distance( p.WorldPosition ) )
-			.FirstOrDefault();
+		// Fallback: nearest alive player (no LINQ — avoid allocation)
+		RoguelitePlayer nearest = null;
+		float nearestDist = float.MaxValue;
+		foreach ( var p in _cachedPlayers )
+		{
+			var dist = Owner.WorldPosition.DistanceSquared( p.WorldPosition );
+			if ( dist < nearestDist )
+			{
+				nearestDist = dist;
+				nearest = p;
+			}
+		}
+		return nearest;
 	}
 
 	/// <summary>

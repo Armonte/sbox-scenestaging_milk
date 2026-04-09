@@ -332,7 +332,7 @@ public class RogueliteEnemyBase : Component
 		_lodFrameCounter++;
 
 		// Reset density counter once per frame
-		var currentFrame = Time.Tick;
+		var currentFrame = (int)(Time.Now * 60);
 		if ( _frameId != currentFrame )
 		{
 			_frameId = currentFrame;
