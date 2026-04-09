@@ -234,7 +234,9 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = false;
 		Nav.Stop();
 
-		rb.ApplyImpulse( direction.Normal * force );
+		// Lift slightly off ground so friction doesn't hold us
+		rb.ApplyImpulse( (direction.Normal + Vector3.Up * 0.3f).Normal * force );
+		Log.Info( $"[Knockback] Applied impulse {force} to {GameObject.Name}, rb.MotionEnabled={rb.MotionEnabled}, mass={rb.PhysicsBody?.Mass}" );
 
 		// Re-enable nav after physics settles
 		_ = ReenableNav();
