@@ -1,4 +1,5 @@
 using Sandbox;
+using System.Collections.Generic;
 
 namespace Editor;
 
@@ -11,7 +12,7 @@ namespace Editor;
 [Icon( "cloud" )]
 public class SkyboxEditorToolEntry : EditorTool
 {
-	private SkyboxEditorSession _session;
+	public SkyboxEditorSession Session { get; private set; }
 	private SkyboxBrushPreview _brushPreview;
 	[Property, Title( "Show Edges" )] public bool ShowEdges { get; set; } = false;
 	[Property, Title( "Show Vertices" )] public bool ShowVertices { get; set; } = true;
@@ -37,9 +38,15 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	public override void OnEnabled()
 	{
-		_session = new SkyboxEditorSession();
+		AllowGameObjectSelection = false;
+		Session = new SkyboxEditorSession();
 		FindSkyboxInScene();
 		SyncFromComponent();
+	}
+
+	public override IEnumerable<EditorTool> GetSubtools()
+	{
+		yield return new SkyboxPaintTool( this );
 	}
 
 	public override Widget CreateToolSidebar()
@@ -105,36 +112,30 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	public override void OnUpdate()
 	{
-		if ( _session.Target == null || !_session.Target.IsValid() )
+		if ( Session.Target == null || !Session.Target.IsValid() )
 		{
 			FindSkyboxInScene();
-			if ( _session.Target == null ) return;
+			if ( Session.Target == null ) return;
 		}
 
-		// Push sidebar values to the component
 		SyncToComponent();
 
-		// Set background color on the editor viewport camera
 		if ( Camera != null )
 			Camera.BackgroundColor = BgColor;
 
-		// Sync paint settings to session
-		_session.BrushRadius = BrushRadius;
-		_session.LeftColor = new Color32( (byte)(LeftPaintColor.r * 255), (byte)(LeftPaintColor.g * 255), (byte)(LeftPaintColor.b * 255), 255 );
-		_session.RightColor = new Color32( (byte)(RightPaintColor.r * 255), (byte)(RightPaintColor.g * 255), (byte)(RightPaintColor.b * 255), 255 );
-		_session.LeftOpacity = PaintOpacity;
-		_session.RightOpacity = PaintOpacity;
-
-		SkyboxEditorGizmos.UpdateCursor( _session );
-		SkyboxEditorGizmos.DrawOverlay( _session, ShowEdges, ShowVertices );
-		SkyboxEditorGizmos.HandleInput( _session );
+		// Sync paint settings to session so sub-tools can read them
+		Session.BrushRadius = BrushRadius;
+		Session.LeftColor = new Color32( (byte)(LeftPaintColor.r * 255), (byte)(LeftPaintColor.g * 255), (byte)(LeftPaintColor.b * 255), 255 );
+		Session.RightColor = new Color32( (byte)(RightPaintColor.r * 255), (byte)(RightPaintColor.g * 255), (byte)(RightPaintColor.b * 255), 255 );
+		Session.LeftOpacity = PaintOpacity;
+		Session.RightOpacity = PaintOpacity;
 	}
 
 	public override void OnDisabled()
 	{
 		_brushPreview?.Delete();
 		_brushPreview = null;
-		_session = null;
+		Session = null;
 	}
 
 	private void FindSkyboxInScene()
@@ -143,9 +144,9 @@ public class SkyboxEditorToolEntry : EditorTool
 		if ( scene == null ) return;
 
 		var skybox = scene.GetAllComponents<SkyboxComponent>().FirstOrDefault();
-		if ( skybox != null && skybox != _session.Target )
+		if ( skybox != null && skybox != Session.Target )
 		{
-			_session.SetTarget( skybox );
+			Session.SetTarget( skybox );
 			SyncFromComponent();
 		}
 	}
@@ -155,7 +156,7 @@ public class SkyboxEditorToolEntry : EditorTool
 	/// </summary>
 	private void SyncToComponent()
 	{
-		var t = _session?.Target;
+		var t = Session?.Target;
 		if ( t == null ) return;
 
 		if ( t.ColorSaturation != Saturation ) t.ColorSaturation = Saturation;
@@ -173,7 +174,7 @@ public class SkyboxEditorToolEntry : EditorTool
 	/// </summary>
 	private void SyncFromComponent()
 	{
-		var t = _session?.Target;
+		var t = Session?.Target;
 		if ( t == null ) return;
 
 		Saturation = t.ColorSaturation;
@@ -188,14 +189,14 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	private string GetStatsText()
 	{
-		var data = _session?.Target?.Data;
+		var data = Session?.Target?.Data;
 		if ( data == null ) return "No skybox loaded";
 		return $"Verts: {data.Vertices.Count}  Tris: {data.Triangles.Count}  Edges: {data.Edges.Count}";
 	}
 
 	private void LoadSkyeFile()
 	{
-		if ( _session?.Target == null )
+		if ( Session?.Target == null )
 		{
 			Log.Warning( "No SkyboxComponent in scene. Add one first." );
 			return;
@@ -217,14 +218,14 @@ public class SkyboxEditorToolEntry : EditorTool
 			return;
 		}
 
-		_session.Target.LoadFromString( content );
+		Session.Target.LoadFromString( content );
 		SyncFromComponent();
-		Log.Info( $"Loaded: {_session.Target.Data.Vertices.Count} verts, {_session.Target.Data.Triangles.Count} tris" );
+		Log.Info( $"Loaded: {Session.Target.Data.Vertices.Count} verts, {Session.Target.Data.Triangles.Count} tris" );
 	}
 
 	private void ImportSpyroSky()
 	{
-		if ( _session?.Target == null )
+		if ( Session?.Target == null )
 		{
 			Log.Warning( "No SkyboxComponent in scene. Add one first." );
 			return;
@@ -253,7 +254,7 @@ public class SkyboxEditorToolEntry : EditorTool
 			return;
 		}
 
-		_session.Target.LoadData( data );
+		Session.Target.LoadData( data );
 		SyncFromComponent();
 
 		var bg = data.BackgroundColor;

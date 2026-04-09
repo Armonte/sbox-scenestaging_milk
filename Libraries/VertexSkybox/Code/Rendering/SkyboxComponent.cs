@@ -81,6 +81,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 
 	SceneObject _sceneObject;
 	Model _model;
+	string _lastKnownSkye;
 
 	protected override void OnEnabled()
 	{
@@ -92,6 +93,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 				Data = SphereGeometry.GenerateSphere( 100f, 12, 24 );
 		}
 
+		_lastKnownSkye = SerializedSkye;
 		BuildModel();
 
 		if ( _model == null )
@@ -128,6 +130,14 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 	protected override void OnUpdate()
 	{
 		ApplyBackgroundColor();
+
+		// Detect undo: if SerializedSkye changed externally, re-parse and rebuild
+		if ( SerializedSkye != _lastKnownSkye && !string.IsNullOrEmpty( SerializedSkye ) )
+		{
+			_lastKnownSkye = SerializedSkye;
+			Data = SkyeFormat.ParseString( SerializedSkye );
+			RebuildMesh();
+		}
 	}
 
 	/// <summary>
@@ -154,6 +164,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 	{
 		Data = SkyeFormat.ParseString( skyeContent );
 		SerializedSkye = skyeContent;
+		_lastKnownSkye = skyeContent;
 
 		var bg = Data.BackgroundColor;
 		BackgroundColor = new Color( bg.r / 255f, bg.g / 255f, bg.b / 255f );
@@ -165,6 +176,7 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 	{
 		Data = data;
 		SerializedSkye = SkyeFormat.WriteString( data );
+		_lastKnownSkye = SerializedSkye;
 
 		var bg = Data.BackgroundColor;
 		BackgroundColor = new Color( bg.r / 255f, bg.g / 255f, bg.b / 255f );
@@ -175,7 +187,10 @@ public sealed class SkyboxComponent : Renderer, Component.ExecuteInEditor
 	public void SaveState()
 	{
 		if ( Data != null )
+		{
 			SerializedSkye = SkyeFormat.WriteString( Data );
+			_lastKnownSkye = SerializedSkye;
+		}
 	}
 
 	public void MarkDirty() => RebuildMesh();

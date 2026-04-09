@@ -1,5 +1,6 @@
 using Sandbox;
 using System;
+using System.Collections.Generic;
 
 namespace Editor;
 
@@ -179,69 +180,29 @@ public static class SkyboxEditorGizmos
 		}
 	}
 
-	public static void HandleInput( SkyboxEditorSession session )
+	/// <summary>
+	/// Find all vertices within the given brush radius around the cursor.
+	/// Returns (vertexIndex, falloff) pairs where falloff is 0..1 (1 at center).
+	/// </summary>
+	public static List<(int Index, float Falloff)> GetVerticesInBrush( SkyboxEditorSession session, float brushRadius )
 	{
-		if ( !session.CursorOnSphere ) return;
-		if ( session.Target?.Data == null ) return;
+		var result = new List<(int, float)>();
+		var data = session.Target?.Data;
+		if ( data == null ) return result;
 
-		// Ctrl + Left click = pick color (pipette)
-		if ( Gizmo.IsCtrlPressed && Gizmo.WasLeftMousePressed )
-		{
-			if ( session.HoveredVertex >= 0 && session.HoveredVertex < session.Target.Data.Vertices.Count )
-			{
-				session.LeftColor = session.Target.Data.Vertices[session.HoveredVertex].Color;
-			}
-			return;
-		}
-
-		// Left click/drag = paint with left color
-		if ( Gizmo.IsLeftMouseDown )
-			PaintVerticesInBrush( session, session.LeftColor, session.LeftOpacity );
-
-		// Shift + Left click/drag = paint with right color
-		if ( Gizmo.IsShiftPressed && Gizmo.IsLeftMouseDown )
-			PaintVerticesInBrush( session, session.RightColor, session.RightOpacity );
-	}
-
-	private static void PaintVerticesInBrush( SkyboxEditorSession session, Color32 color, float opacity )
-	{
-		var data = session.Target.Data;
 		var cursor = session.CursorPosition;
-		float radiusSq = session.BrushRadius * session.BrushRadius;
-		bool changed = false;
+		float radiusSq = brushRadius * brushRadius;
 
 		for ( int i = 0; i < data.Vertices.Count; i++ )
 		{
-			var v = data.Vertices[i];
-			float distSq = GetRenderedPos( v ).DistanceSquared( cursor );
+			var localPos = GetRenderedPos( data.Vertices[i] );
+			float distSq = localPos.DistanceSquared( cursor );
 			if ( distSq > radiusSq ) continue;
 
-			float t = 1f - MathF.Sqrt( distSq ) / session.BrushRadius;
-			t *= opacity;
-
-			// Lerp in float space to avoid byte overflow
-			float or = v.Color.r / 255f;
-			float og = v.Color.g / 255f;
-			float ob = v.Color.b / 255f;
-			float nr = color.r / 255f;
-			float ng = color.g / 255f;
-			float nb = color.b / 255f;
-
-			v.Color = new Color32(
-				(byte)(((or + (nr - or) * t).Clamp( 0f, 1f )) * 255),
-				(byte)(((og + (ng - og) * t).Clamp( 0f, 1f )) * 255),
-				(byte)(((ob + (nb - ob) * t).Clamp( 0f, 1f )) * 255),
-				255
-			);
-
-			data.Vertices[i] = v;
-			changed = true;
+			float falloff = 1f - MathF.Sqrt( distSq ) / brushRadius;
+			result.Add( (i, falloff) );
 		}
 
-		if ( changed )
-		{
-			Log.Info( $"[Paint] Painted vertices, brush={session.BrushRadius}, cursor=({cursor.x:F1},{cursor.y:F1},{cursor.z:F1})" );
-			session.Target.RebuildMesh();
-		}
+		return result;
 	}
 }
