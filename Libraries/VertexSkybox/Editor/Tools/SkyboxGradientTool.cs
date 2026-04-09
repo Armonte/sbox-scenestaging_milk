@@ -61,7 +61,7 @@ public class SkyboxGradientTool : SkyboxSubTool
 		_startLocal = Session.CursorPosition;
 		_startWorld = Session.CursorWorldPosition;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Gradient" )
 			.WithComponentChanges( Target )
@@ -141,7 +141,7 @@ public class SkyboxGradientTool : SkyboxSubTool
 	private void EndDrag()
 	{
 		_dragging = false;
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

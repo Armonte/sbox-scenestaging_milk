@@ -76,7 +76,7 @@ public class SkyboxTriFillTool : SkyboxSubTool
 
 	private void CreateTriangle( int v0, int v1, int v2 )
 	{
-		Target.SaveState();
+		Target?.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( "Skybox Triangle Fill" )
 			.WithComponentChanges( Target )
@@ -90,7 +90,7 @@ public class SkyboxTriFillTool : SkyboxSubTool
 			Data.Triangles.Add( new SkyboxTriangle( v0, v1, v2, e0, e1, e2 ) );
 			Data.InvalidateAdjacency();
 
-			Target.SaveState();
+			Target?.SaveState();
 		}
 
 		Target.RebuildMesh();

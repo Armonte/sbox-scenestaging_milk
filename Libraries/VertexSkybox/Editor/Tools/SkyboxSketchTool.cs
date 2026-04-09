@@ -63,7 +63,7 @@ public class SkyboxSketchTool : SkyboxSubTool
 	private void BeginDraw()
 	{
 		_drawing = true;
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Sketch Draw" )
 			.WithComponentChanges( Target )
@@ -80,7 +80,7 @@ public class SkyboxSketchTool : SkyboxSubTool
 	private void BeginErase()
 	{
 		_erasing = true;
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Sketch Erase" )
 			.WithComponentChanges( Target )
@@ -125,7 +125,7 @@ public class SkyboxSketchTool : SkyboxSubTool
 	{
 		_drawing = false;
 		_erasing = false;
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

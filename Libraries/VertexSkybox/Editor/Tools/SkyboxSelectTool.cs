@@ -87,7 +87,7 @@ public class SkyboxSelectTool : SkyboxSubTool
 		_lastCursorLocal = Session.CursorPosition;
 		_selectionCenter = ComputeSelectionCenter();
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( $"Skybox {_mode} Vertices" )
 			.WithComponentChanges( Target )
@@ -195,7 +195,7 @@ public class SkyboxSelectTool : SkyboxSubTool
 		if ( _mode == TransformMode.None ) return;
 		_mode = TransformMode.None;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

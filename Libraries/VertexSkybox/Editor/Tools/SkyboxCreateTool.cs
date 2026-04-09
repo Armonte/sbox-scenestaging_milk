@@ -62,7 +62,7 @@ public class SkyboxCreateTool : SkyboxSubTool
 		if ( _creating ) return;
 		_creating = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Create Vertices" )
 			.WithComponentChanges( Target )
@@ -96,7 +96,7 @@ public class SkyboxCreateTool : SkyboxSubTool
 		if ( !_creating ) return;
 		_creating = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

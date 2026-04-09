@@ -46,7 +46,7 @@ public class SkyboxEdgeCollapseTool : SkyboxSubTool
 		int vA = edge.V1, vB = edge.V2;
 		if ( vA >= Data.Vertices.Count || vB >= Data.Vertices.Count ) return;
 
-		Target.SaveState();
+		Target?.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( "Skybox Edge Collapse" )
 			.WithComponentChanges( Target )
@@ -121,7 +121,7 @@ public class SkyboxEdgeCollapseTool : SkyboxSubTool
 			RemapVertexIndices( vB );
 
 			Data.InvalidateAdjacency();
-			Target.SaveState();
+			Target?.SaveState();
 		}
 
 		Target.RebuildMesh();

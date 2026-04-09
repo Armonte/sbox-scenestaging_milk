@@ -51,7 +51,7 @@ public class SkyboxBeautifyTool : SkyboxSubTool
 	{
 		_beautifying = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Beautify" )
 			.WithComponentChanges( Target )
@@ -209,7 +209,7 @@ public class SkyboxBeautifyTool : SkyboxSubTool
 		if ( !_beautifying ) return;
 		_beautifying = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

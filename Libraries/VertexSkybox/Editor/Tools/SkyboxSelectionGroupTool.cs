@@ -74,7 +74,7 @@ public class SkyboxSelectionGroupTool : SkyboxSubTool
 	{
 		_painting = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Assign Selection Group" )
 			.WithComponentChanges( Target )
@@ -109,7 +109,7 @@ public class SkyboxSelectionGroupTool : SkyboxSubTool
 		if ( !_painting ) return;
 		_painting = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

@@ -107,7 +107,7 @@ public class SkyboxEdgeFlipTool : SkyboxSubTool
 		int d = GetOppositeVertex( tri1, a, b );
 		if ( c < 0 || d < 0 ) return;
 
-		Target.SaveState();
+		Target?.SaveState();
 		using ( SceneEditorSession.Active
 			.UndoScope( "Skybox Edge Flip" )
 			.WithComponentChanges( Target )
@@ -127,7 +127,7 @@ public class SkyboxEdgeFlipTool : SkyboxSubTool
 			Data.Triangles[sharedTris[1]] = new SkyboxTriangle( c, d, b, edgeIndex, eDB, eCB );
 
 			Data.InvalidateAdjacency();
-			Target.SaveState();
+			Target?.SaveState();
 		}
 
 		Target.RebuildMesh();

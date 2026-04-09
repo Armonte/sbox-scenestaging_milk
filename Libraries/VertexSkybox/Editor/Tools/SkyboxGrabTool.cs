@@ -57,7 +57,7 @@ public class SkyboxGrabTool : SkyboxSubTool
 		_grabbing = true;
 		_lastCursorLocal = Session.CursorPosition;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Grab" )
 			.WithComponentChanges( Target )
@@ -94,7 +94,7 @@ public class SkyboxGrabTool : SkyboxSubTool
 		_grabbing = false;
 		_grabbedVerts = null;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

@@ -52,7 +52,7 @@ public class SkyboxAutofillTool : SkyboxSubTool
 	{
 		_filling = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Autofill" )
 			.WithComponentChanges( Target )
@@ -143,7 +143,7 @@ public class SkyboxAutofillTool : SkyboxSubTool
 		if ( !_filling ) return;
 		_filling = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

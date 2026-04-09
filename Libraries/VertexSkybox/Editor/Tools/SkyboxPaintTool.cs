@@ -76,7 +76,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 	{
 		_strokeActive = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Paint Stroke" )
 			.WithComponentChanges( Target )
@@ -88,7 +88,7 @@ public class SkyboxPaintTool : SkyboxSubTool
 		if ( !_strokeActive ) return;
 		_strokeActive = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}

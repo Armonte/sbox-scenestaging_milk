@@ -52,7 +52,7 @@ public class SkyboxDeleteTool : SkyboxSubTool
 	{
 		_deleting = true;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope = SceneEditorSession.Active
 			.UndoScope( "Skybox Delete" )
 			.WithComponentChanges( Target )
@@ -202,7 +202,7 @@ public class SkyboxDeleteTool : SkyboxSubTool
 		if ( !_deleting ) return;
 		_deleting = false;
 
-		Target.SaveState();
+		Target?.SaveState();
 		_undoScope?.Dispose();
 		_undoScope = null;
 	}
