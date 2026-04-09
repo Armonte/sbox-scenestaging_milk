@@ -243,18 +243,35 @@ public class RogueliteEnemyBase : Component
 
 	private void UpdateKnockback()
 	{
-		// Move horizontally
-		WorldPosition += _knockVelocity * Time.Delta;
+		var movement = _knockVelocity * Time.Delta;
+
+		// Wall check — trace in movement direction before moving
+		var wallTrace = Scene.Trace
+			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Up * 20f + movement )
+			.Size( 16f )
+			.IgnoreGameObjectHierarchy( GameObject )
+			.WithoutTags( "trigger", "enemy" )
+			.Run();
+
+		if ( wallTrace.Hit )
+		{
+			// Hit wall — stop knockback
+			_knockVelocity = Vector3.Zero;
+		}
+		else
+		{
+			WorldPosition += movement;
+		}
 
 		// Stick to ground
-		var tr = Scene.Trace
+		var groundTrace = Scene.Trace
 			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Down * 200f )
 			.IgnoreGameObjectHierarchy( GameObject )
 			.WithoutTags( "trigger" )
 			.Run();
 
-		if ( tr.Hit )
-			WorldPosition = WorldPosition.WithZ( tr.HitPosition.z );
+		if ( groundTrace.Hit )
+			WorldPosition = WorldPosition.WithZ( groundTrace.HitPosition.z );
 
 		// Drag
 		_knockVelocity *= 1f - Time.Delta * 5f;
