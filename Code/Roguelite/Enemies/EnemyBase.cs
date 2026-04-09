@@ -94,9 +94,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		// LOD runs every frame (cheap — one distance check)
 		UpdateLOD();
 
-		// Reduced tick rate — close: ~16hz, far: ~8hz (at 60fps)
-		var tickInterval = _isClose ? 4 : 8;
-		var shouldTick = _lodFrameCounter % tickInterval == 0;
+		var shouldTick = true;
 
 		if ( _shouldAnimate && shouldTick )
 			UpdateAnimation();
