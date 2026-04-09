@@ -228,6 +228,11 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
+	// Uses Rigidbody for real physics knockback. Pattern from s&box NavigationLinkTraversal.PhysicsJump.
+	// Flow: disable NavAgent → enable Rigidbody → set velocity → physics handles walls →
+	//       detect landing → disable Rigidbody → re-enable NavAgent
+
+	[Property, Title( "Knockback Resistance" )] public float KnockbackResistance { get; set; } = 1f;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
@@ -235,50 +240,53 @@ public class RogueliteEnemyBase : Component
 		if ( Health.IsDead ) return;
 		if ( _inKnockback ) return;
 
+		// Scale force by resistance (heavier enemies get knocked less)
+		var effectiveForce = force / KnockbackResistance;
+		if ( effectiveForce < 10f ) return; // Too weak, ignore
+
 		_inKnockback = true;
-		_ = DoKnockback( direction.WithZ( 0 ).Normal, force );
+		_ = RunKnockback( direction.WithZ( 0 ).Normal, effectiveForce );
 	}
 
-	/// <summary>
-	/// Async knockback using Rigidbody for real physics (wall collision, sliding).
-	/// Pattern from s&box NavigationLinkTraversal.PhysicsJump.
-	/// </summary>
-	private async Task DoKnockback( Vector3 direction, float force )
+	private async Task RunKnockback( Vector3 direction, float force )
 	{
-		// Hand position to physics
+		// 1. Switch from NavAgent to Rigidbody
 		Nav.UpdatePosition = false;
+		Nav.Stop();
 		Body.MotionEnabled = true;
 		Body.Gravity = true;
 
-		// Launch — force is already scaled by weapon, just apply directly
-		Body.Velocity = direction * force + Vector3.Up * force * 0.1f;
+		// 2. Apply velocity — horizontal push + slight upward pop
+		Body.Velocity = direction * force + Vector3.Up * MathF.Min( force * 0.15f, 100f );
 
-		TimeSince timeSinceStart = 0;
-
-		// Wait for landing or timeout
-		while ( timeSinceStart < 1.0f )
+		// 3. Wait for physics to settle
+		TimeSince elapsed = 0;
+		while ( elapsed < 2f )
 		{
-			if ( !IsValid || Health.IsDead ) return;
+			if ( !IsValid || Health.IsDead )
+			{
+				_inKnockback = false;
+				return;
+			}
 
-			// Keep nav agent synced so it knows where we are
 			Nav.SetAgentPosition( WorldPosition );
 
-			// Check if we've landed (on ground and slowed down)
-			if ( timeSinceStart > 0.15f )
+			// Landed: on ground + slow enough
+			if ( elapsed > 0.1f )
 			{
-				var speed = Body.Velocity.WithZ( 0 ).Length;
-				var tr = Scene.Trace.Ray( WorldPosition + Vector3.Up * 5f, WorldPosition + Vector3.Down * 20f )
+				var grounded = Scene.Trace
+					.Ray( WorldPosition + Vector3.Up * 5f, WorldPosition + Vector3.Down * 15f )
 					.IgnoreGameObjectHierarchy( GameObject )
 					.Run();
 
-				if ( tr.Hit && speed < 30f )
+				if ( grounded.Hit && Body.Velocity.Length < 50f )
 					break;
 			}
 
 			await Task.Frame();
 		}
 
-		// Hand back to NavAgent
+		// 4. Switch back to NavAgent
 		Body.Velocity = Vector3.Zero;
 		Body.MotionEnabled = false;
 		Body.Gravity = false;
