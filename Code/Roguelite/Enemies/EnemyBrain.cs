@@ -53,7 +53,11 @@ public class EnemyBrain
 			return;
 		}
 
-		if ( dist <= Owner.AttackRange && HasLineOfSight( target ) )
+		// StopDistance = stop moving. AttackRange = can deal damage.
+		// Enemy stops at StopDistance OR AttackRange, whichever is larger.
+		var stopAt = MathF.Max( Owner.StopDistance, Owner.AttackRange );
+
+		if ( dist <= stopAt && HasLineOfSight( target ) )
 		{
 			State = EnemyBrainState.Attack;
 		}
