@@ -146,21 +146,38 @@
         },
         {
           "__type": "PaniniProjection",
-          "__guid": "d6256c03-4b7c-47c2-a971-63036451566f",
+          "__guid": "21dc464a-388a-4aaf-9f9b-a9ad2e6346e6",
+          "__enabled": true,
+          "ProjectionMode": "Panini",
+          "Strength": 0.5,
+          "Fill": 1,
+          "PaniniVerticalCompensation": 0
+        },
+        {
+          "__type": "PaniniProjection",
+          "__guid": "e1098907-a50f-4c25-86a1-e20457156b7c",
           "__enabled": true,
           "Flags": 0,
-          "ChromaticAberration": 0,
-          "Fill": 0.5,
-          "Mode": 1,
           "OnComponentDestroy": null,
           "OnComponentDisabled": null,
           "OnComponentEnabled": null,
           "OnComponentFixedUpdate": null,
           "OnComponentStart": null,
           "OnComponentUpdate": null,
-          "Strength": 1,
-          "VerticalCompression": 0,
-          "VignetteStrength": 0
+          "Strength": 1
+        },
+        {
+          "__type": "PaniniProjection",
+          "__guid": "bef3d73e-2065-4b5e-9b49-adc20f8883c7",
+          "__enabled": true,
+          "Flags": 0,
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null,
+          "Strength": 1
         }
       ],
       "Children": []
@@ -772,7 +789,7 @@
       },
       "Sandbox.Clutter.ClutterGridSystem": {
         "Storage": {
-          "$blob": "4a67e02f-8741-4c4d-86ca-505bb5313c4d"
+          "$blob": "016c9096-efe5-4563-8a6b-b2268fa5a519"
         }
       }
     }
