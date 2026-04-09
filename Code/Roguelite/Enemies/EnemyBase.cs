@@ -38,6 +38,10 @@ public class RogueliteEnemyBase : Component
 
 		Tags.Add( "enemy" );
 
+		// Enemies ignore each other's colliders — no pushing into air
+		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
+			col.Tags.Add( "enemy" );
+
 		Health.Init( Health.MaxHealth );
 		Health.OnDeath += OnDeath;
 
@@ -57,7 +61,7 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = true;
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
-		Nav.Separation = 0.1f; // Low crowd avoidance — enough to prevent stacking, cheaper than default 0.25
+		Nav.Separation = 0f;
 
 		// Disable rigidbody until needed for knockback — saves physics overhead
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
