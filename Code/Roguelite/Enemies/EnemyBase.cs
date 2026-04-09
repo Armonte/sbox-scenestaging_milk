@@ -26,7 +26,7 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	[Property] public float AttackRange { get; set; } = 120f;
 	[Property] public float StopDistance { get; set; } = 100f;
 	[Property] public float DetectionRange { get; set; } = 1200f;
-	[Property] public float AttackCooldown { get; set; } = 1.5f;
+	[Property] public float AttackCooldown { get; set; } = 0.8f;
 	[Property] public float MoveSpeed { get; set; } = 150f;
 	[Property] public string EnemyName { get; set; } = "Enemy";
 	[Property, Title( "Passive (No AI)" )] public bool IsPassive { get; set; } = false;
@@ -125,12 +125,11 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		// Everything below only runs at tick rate
 		if ( !shouldTick ) return;
 
-		// Committed to attack — skip brain entirely
-		if ( IsAttacking )
+		// During attack animation — disable nav but let brain run for timer checks
+		if ( IsAttacking && Nav.IsValid() && Nav.Enabled )
 		{
-			if ( Nav.IsValid() && Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
-			FaceTarget();
-			return;
+			Nav.Stop();
+			Nav.Enabled = false;
 		}
 
 		// Passive enemies just idle
@@ -167,9 +166,11 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			case EnemyBrainState.Attack:
 				IsMoving = false;
 				FaceTarget();
-				if ( _attackTimer <= 0 )
+				if ( _attackTimer <= 0 && !IsAttacking )
 				{
 					PerformAttack( CurrentTarget );
+					// Cooldown starts NOW — runs during animation, so next attack
+					// can fire immediately after anim finishes if cooldown < anim duration
 					_attackTimer = AttackCooldown;
 				}
 				break;
