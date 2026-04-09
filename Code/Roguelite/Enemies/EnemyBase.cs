@@ -227,8 +227,14 @@ public class RogueliteEnemyBase : Component
 		if ( Health.IsDead ) return;
 
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( rb.IsValid() )
-			rb.ApplyImpulse( direction.Normal * force );
+		if ( !rb.IsValid() )
+		{
+			Log.Warning( $"[Knockback] No Rigidbody on {GameObject.Name}" );
+			return;
+		}
+
+		Log.Info( $"[Knockback] {GameObject.Name}: force={force}, mass={rb.PhysicsBody?.Mass}, motionEnabled={rb.MotionEnabled}, navUpdatePos={Nav.UpdatePosition}" );
+		rb.ApplyImpulse( direction.Normal * force );
 	}
 
 	// --- Separation ---
