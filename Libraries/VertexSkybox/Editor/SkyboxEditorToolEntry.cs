@@ -1,4 +1,5 @@
 using Sandbox;
+using System;
 using System.Collections.Generic;
 
 namespace Editor;
@@ -14,6 +15,7 @@ public class SkyboxEditorToolEntry : EditorTool
 {
 	public SkyboxEditorSession Session { get; private set; }
 	private SkyboxBrushPreview _brushPreview;
+	private IDisposable _propertyUndoScope;
 	[Property, Title( "Show Edges" )] public bool ShowEdges { get; set; } = false;
 	[Property, Title( "Show Vertices" )] public bool ShowVertices { get; set; } = true;
 
@@ -159,6 +161,8 @@ public class SkyboxEditorToolEntry : EditorTool
 
 	public override void OnDisabled()
 	{
+		_propertyUndoScope?.Dispose();
+		_propertyUndoScope = null;
 		_brushPreview?.Delete();
 		_brushPreview = null;
 		Session = null;
@@ -178,21 +182,52 @@ public class SkyboxEditorToolEntry : EditorTool
 	}
 
 	/// <summary>
-	/// Push sidebar values to the SkyboxComponent.
+	/// Push sidebar values to the SkyboxComponent, wrapped in undo scope
+	/// so slider drags are undoable. Opens scope on first change, closes
+	/// when mouse is released (batches entire drag into one undo entry).
 	/// </summary>
 	private void SyncToComponent()
 	{
 		var t = Session?.Target;
 		if ( t == null ) return;
 
-		if ( t.ColorSaturation != Saturation ) t.ColorSaturation = Saturation;
-		if ( t.ColorBrightness != Brightness ) t.ColorBrightness = Brightness;
-		if ( t.ColorGamma != Gamma ) t.ColorGamma = Gamma;
-		if ( t.SkyboxScale != SkyScale ) t.SkyboxScale = SkyScale;
-		if ( t.RedShift != RedShift ) t.RedShift = RedShift;
-		if ( t.GreenShift != GreenShift ) t.GreenShift = GreenShift;
-		if ( t.BlueShift != BlueShift ) t.BlueShift = BlueShift;
-		if ( t.BackgroundColor != BgColor ) t.BackgroundColor = BgColor;
+		bool changed =
+			t.ColorSaturation != Saturation ||
+			t.ColorBrightness != Brightness ||
+			t.ColorGamma != Gamma ||
+			t.SkyboxScale != SkyScale ||
+			t.RedShift != RedShift ||
+			t.GreenShift != GreenShift ||
+			t.BlueShift != BlueShift ||
+			t.BackgroundColor != BgColor;
+
+		if ( changed )
+		{
+			// Open undo scope on first change (start of slider drag)
+			if ( _propertyUndoScope == null )
+			{
+				_propertyUndoScope = SceneEditorSession.Active
+					.UndoScope( "Skybox Property Change" )
+					.WithComponentChanges( t )
+					.Push();
+			}
+
+			t.ColorSaturation = Saturation;
+			t.ColorBrightness = Brightness;
+			t.ColorGamma = Gamma;
+			t.SkyboxScale = SkyScale;
+			t.RedShift = RedShift;
+			t.GreenShift = GreenShift;
+			t.BlueShift = BlueShift;
+			t.BackgroundColor = BgColor;
+		}
+
+		// Close scope when mouse is released (end of slider drag)
+		if ( _propertyUndoScope != null && !Gizmo.IsLeftMouseDown )
+		{
+			_propertyUndoScope.Dispose();
+			_propertyUndoScope = null;
+		}
 	}
 
 	/// <summary>
