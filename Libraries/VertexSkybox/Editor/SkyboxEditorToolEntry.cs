@@ -162,8 +162,30 @@ public class SkyboxEditorToolEntry : EditorTool
 		{
 			var group = sidebar.AddGroup( "Layer" );
 
+			// 3D layer preview
+			var preview = new SkyboxLayerPreviewWidget( this );
+			group.Add( preview );
+
+			// View mode buttons
+			var modeRow = new Widget();
+			modeRow.Layout = Layout.Row();
+			modeRow.Layout.Spacing = 2;
+
+			var allBtn = new Button( "All" );
+			allBtn.Clicked = () => preview.CurrentViewMode = SkyboxLayerPreviewWidget.ViewMode.AllLayers;
+			modeRow.Layout.Add( allBtn );
+
+			var highlightBtn = new Button( "Highlight" );
+			highlightBtn.Clicked = () => preview.CurrentViewMode = SkyboxLayerPreviewWidget.ViewMode.ActiveHighlight;
+			modeRow.Layout.Add( highlightBtn );
+
+			var soloBtn = new Button( "Solo" );
+			soloBtn.Clicked = () => preview.CurrentViewMode = SkyboxLayerPreviewWidget.ViewMode.ActiveOnly;
+			modeRow.Layout.Add( soloBtn );
+
+			group.Add( modeRow );
+
 			var layerLabel = new Label( $"Current Layer: {Session?.CurrentLayer ?? 0}" );
-			layerLabel.Name = "layer_label";
 			layerLabel.SetStyles( "font-size: 12px; margin: 4px;" );
 			group.Add( layerLabel );
 

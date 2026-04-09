@@ -129,9 +129,16 @@
 - [ ] Palette persists with .skye save/load
 
 ## Sidebar: Layers
+- [ ] 3D layer preview widget shows the skybox sphere in the sidebar
+- [ ] Preview rotates to match the main editor viewport camera angle
+- [ ] **All** button — shows all layers in full color
+- [ ] **Highlight** button — active layer in color, others greyscale/dimmed
+- [ ] **Solo** button — only active layer visible, others hidden
+- [ ] Preview background matches the skybox background color
 - [ ] Current layer label shows "Current Layer: 0"
 - [ ] Select vertices, click "Layer Up" — verts move to layer 1, label updates
 - [ ] Click "Layer Down" — verts move back to layer 0
+- [ ] Preview updates when layer changes
 - [ ] Layers range 0-5, buttons clamp at boundaries
 - [ ] Layer changes are undoable (Ctrl+Z)
 - [ ] Vertices on higher layers render further from center (parallax/RenderScale)
