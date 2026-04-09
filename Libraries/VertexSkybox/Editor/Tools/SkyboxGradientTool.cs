@@ -101,37 +101,32 @@ public class SkyboxGradientTool : SkyboxSubTool
 		float opacity = Session.LeftOpacity;
 		bool changed = false;
 
-		// Apply gradient to all vertices within the brush radius of the gradient line
+		// Apply gradient to ALL vertices. The projection onto the gradient axis
+		// determines the color blend (t=0 at start, t=1 at end).
+		// Vertices outside the 0..1 range get clamped to start/end color.
 		for ( int i = 0; i < Data.Vertices.Count; i++ )
 		{
 			var v = Data.Vertices[i];
 			var pos = SkyboxEditorGizmos.GetRenderedPos( v );
 
-			// Project vertex onto gradient axis to get t value (0..1)
+			// Project vertex onto gradient axis to get t value
 			float t = Vector3.Dot( pos - _startLocal, axis ) / axisLenSq;
 			t = t.Clamp( 0f, 1f );
-
-			// Distance from gradient line for falloff
-			var projected = _startLocal + axis * t;
-			float dist = pos.Distance( projected );
-			if ( dist > Session.BrushRadius ) continue;
-
-			float falloff = (1f - dist / Session.BrushRadius) * opacity;
 
 			// Lerp between start and end color at position t
 			float gr = (startColor.r + (endColor.r - startColor.r) * t) / 255f;
 			float gg = (startColor.g + (endColor.g - startColor.g) * t) / 255f;
 			float gb = (startColor.b + (endColor.b - startColor.b) * t) / 255f;
 
-			// Blend with existing color using falloff
+			// Blend with existing color using opacity
 			float or_ = v.Color.r / 255f;
 			float og = v.Color.g / 255f;
 			float ob = v.Color.b / 255f;
 
 			v.Color = new Color32(
-				(byte)(((or_ + (gr - or_) * falloff).Clamp( 0f, 1f )) * 255),
-				(byte)(((og + (gg - og) * falloff).Clamp( 0f, 1f )) * 255),
-				(byte)(((ob + (gb - ob) * falloff).Clamp( 0f, 1f )) * 255),
+				(byte)(((or_ + (gr - or_) * opacity).Clamp( 0f, 1f )) * 255),
+				(byte)(((og + (gg - og) * opacity).Clamp( 0f, 1f )) * 255),
+				(byte)(((ob + (gb - ob) * opacity).Clamp( 0f, 1f )) * 255),
 				255
 			);
 
