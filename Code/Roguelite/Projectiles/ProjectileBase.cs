@@ -45,6 +45,12 @@ public class ProjectileBase : Component
 
 	protected override void OnUpdate()
 	{
+		if ( !Attacker.IsValid() )
+		{
+			GameObject.Destroy();
+			return;
+		}
+
 		if ( _spawnTime > Lifetime )
 		{
 			OnLifetimeExpired();
