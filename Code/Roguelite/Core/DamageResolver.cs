@@ -70,8 +70,8 @@ public static class DamageResolver
 		if ( ctx.IsHeadshot )
 			dmg *= 1.25f;
 
-		// 4. Floor at 1 damage
-		dmg = MathF.Max( 1f, dmg );
+		// 4. Floor at 0 damage
+		dmg = MathF.Max( 0f, dmg );
 
 		// 5. Apply damage
 		health.ApplyDamage( dmg, attack.Type, attacker );

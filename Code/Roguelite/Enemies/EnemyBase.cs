@@ -279,7 +279,7 @@ public class RogueliteEnemyBase : Component
 
 		// Keep knockback grounded — no vertical launch, just horizontal push
 		_inKnockback = true;
-		_knockVelocity = direction.WithZ( 0 ).Normal * force * 4f;
+		_knockVelocity = direction.WithZ( 0 ).Normal * force * 6f;
 	}
 
 	private void UpdateKnockback()
@@ -321,11 +321,11 @@ public class RogueliteEnemyBase : Component
 
 		WorldPosition = newPos;
 
-		// Horizontal drag — decelerate quickly
-		_knockVelocity *= 0.88f;
+		// Horizontal drag — frame-rate independent decel
+		_knockVelocity *= MathF.Pow( 0.05f, Time.Delta );
 
 		// Stop when slow enough
-		if ( _knockVelocity.Length < 15f )
+		if ( _knockVelocity.Length < 10f )
 		{
 			_inKnockback = false;
 			Nav.SetAgentPosition( WorldPosition );
