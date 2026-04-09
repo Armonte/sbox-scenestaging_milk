@@ -64,23 +64,19 @@ public sealed class PlayerCamera : Component
 	}
 
 	/// <summary>
-	/// Tag the local player's body renderers so the camera excludes them in first-person.
-	/// Other players' cameras won't have this exclude tag, so they still see our body.
+	/// Hide the local player's body in first person by setting render type to ShadowsOnly.
+	/// Other players' bodies stay visible because this only runs on !IsProxy.
 	/// </summary>
 	private void HideLocalBody( CameraComponent cam )
 	{
 		if ( _bodyHidden ) return;
 		_bodyHidden = true;
 
-		// Tag all renderers on this player
 		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 		foreach ( var r in renderers )
 		{
-			r.Tags.Add( FirstPersonHideTag );
+			r.RenderType = ModelRenderer.ShadowRenderType.ShadowsOnly;
 		}
-
-		// Tell the camera to exclude objects with this tag
-		cam.RenderExcludeTags.Add( FirstPersonHideTag );
 	}
 
 	private void ShowLocalBody( CameraComponent cam )
@@ -91,15 +87,12 @@ public sealed class PlayerCamera : Component
 		var renderers = Components.GetAll<ModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 		foreach ( var r in renderers )
 		{
-			r.Tags.Remove( FirstPersonHideTag );
+			r.RenderType = ModelRenderer.ShadowRenderType.On;
 		}
-
-		cam.RenderExcludeTags.Remove( FirstPersonHideTag );
 	}
 
 	protected override void OnDisabled()
 	{
-		// Clean up tags if component is disabled
 		if ( _bodyHidden )
 		{
 			var cam = Scene.GetAllComponents<CameraComponent>().FirstOrDefault();
