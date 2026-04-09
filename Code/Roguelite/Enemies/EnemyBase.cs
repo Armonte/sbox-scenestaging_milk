@@ -38,9 +38,14 @@ public class RogueliteEnemyBase : Component
 
 		Tags.Add( "enemy" );
 
-		// Enemies ignore each other's colliders — no pushing into air
+		// Make colliders triggers — prevents enemies pushing each other into the air.
+		// Weapon traces still detect triggers. Rigidbody knockback re-enables solid
+		// collision temporarily.
 		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
+		{
+			col.IsTrigger = true;
 			col.Tags.Add( "enemy" );
+		}
 
 		Health.Init( Health.MaxHealth );
 		Health.OnDeath += OnDeath;
@@ -293,6 +298,10 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = false;
 		Nav.Stop();
 
+		// Make colliders solid during knockback so we hit walls
+		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
+			col.IsTrigger = false;
+
 		rb.Enabled = true;
 		rb.Velocity = direction.WithZ( 0 ).Normal * force;
 	}
@@ -313,6 +322,10 @@ public class RogueliteEnemyBase : Component
 				_knockbackRb.Velocity = Vector3.Zero;
 				_knockbackRb.Enabled = false;
 			}
+
+			// Back to trigger — no physics collision with other enemies
+			foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
+				col.IsTrigger = true;
 
 			_inKnockback = false;
 			_knockbackRb = null;
