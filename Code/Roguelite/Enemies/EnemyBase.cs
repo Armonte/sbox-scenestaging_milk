@@ -71,12 +71,6 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		if ( _inKnockback )
-		{
-			UpdateKnockback();
-			return;
-		}
-
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
 		{
@@ -226,38 +220,15 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
-	// Simple: offset the NavAgent's target position. The agent slides there
-	// naturally using its own pathfinding and wall avoidance.
-
-	private Vector3 _knockOffset;
-	private bool _inKnockback;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		// Push the enemy by offsetting where NavAgent thinks it should be
-		_knockOffset = direction.WithZ( 0 ).Normal * force * 0.5f;
-		_inKnockback = true;
-	}
-
-	private void UpdateKnockback()
-	{
-		// Move NavAgent target to the offset position — it handles walls/ground
-		var target = WorldPosition + _knockOffset;
-		Nav.MaxSpeed = _knockOffset.Length * 3f;
-		Nav.MoveTo( target );
-
-		// Decay
-		_knockOffset *= 1f - Time.Delta * 6f;
-
-		if ( _knockOffset.Length < 2f )
-		{
-			_inKnockback = false;
-			_knockOffset = Vector3.Zero;
-			Nav.MaxSpeed = MoveSpeed;
-		}
+		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( rb.IsValid() )
+			rb.ApplyImpulse( direction.Normal * force );
 	}
 
 	// --- Separation ---
