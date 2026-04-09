@@ -112,21 +112,12 @@ public class RogueliteEnemyBase : Component
 
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
-		// Committed to attack — disable navmesh entirely, no pathfinding cost
+		// Committed to attack — skip brain entirely
 		if ( IsAttacking )
 		{
-			if ( Nav.IsValid() && Nav.Enabled )
-			{
-				Nav.Stop();
-				Nav.Enabled = false;
-			}
+			if ( Nav.IsValid() && Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
 			FaceTarget();
 			return;
-		}
-		else if ( Nav.IsValid() && !Nav.Enabled )
-		{
-			Nav.Enabled = true;
-			Nav.SetAgentPosition( WorldPosition );
 		}
 
 		// Passive enemies just idle
@@ -142,10 +133,23 @@ public class RogueliteEnemyBase : Component
 
 		Brain.Tick();
 
+		// Only Chase and Flee need NavAgent active — everything else disables it
+		var needsNav = Brain.State == EnemyBrainState.Chase || Brain.State == EnemyBrainState.Flee;
+
+		if ( needsNav && Nav.IsValid() && !Nav.Enabled )
+		{
+			Nav.Enabled = true;
+			Nav.SetAgentPosition( WorldPosition );
+		}
+		else if ( !needsNav && Nav.IsValid() && Nav.Enabled )
+		{
+			Nav.Stop();
+			Nav.Enabled = false;
+		}
+
 		switch ( Brain.State )
 		{
 			case EnemyBrainState.Idle:
-				Nav.Stop();
 				break;
 
 			case EnemyBrainState.Chase:
@@ -153,7 +157,6 @@ public class RogueliteEnemyBase : Component
 				break;
 
 			case EnemyBrainState.Attack:
-				Nav.Stop();
 				IsMoving = false;
 				FaceTarget();
 				if ( _attackTimer <= 0 )
