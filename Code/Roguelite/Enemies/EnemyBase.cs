@@ -96,7 +96,8 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 		var shouldTick = true;
 
-		if ( _shouldAnimate && shouldTick )
+		// Animation update — only once per frame (also called on clients via shouldAnimate)
+		if ( _shouldAnimate )
 			UpdateAnimation();
 
 		if ( !Networking.IsHost ) return;
@@ -189,8 +190,6 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		// Clear attack intent if brain left attack state
 		if ( Brain.State != EnemyBrainState.Attack )
 			_wantsToAttack = false;
-
-		UpdateAnimation();
 	}
 
 	// --- Movement ---
