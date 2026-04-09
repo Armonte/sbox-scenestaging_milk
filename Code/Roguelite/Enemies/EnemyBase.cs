@@ -244,68 +244,31 @@ public class RogueliteEnemyBase : Component
 
 		_inKnockback = true;
 		_knockVelocity = direction.WithZ( 0 ).Normal * force * 6f;
-
-		// Take position control away from NavAgent during knockback
-		Nav.UpdatePosition = false;
-		Nav.Stop();
+		_knockTimer = 0f;
 	}
+
+	private float _knockTimer;
 
 	private void UpdateKnockback()
 	{
-		var movement = _knockVelocity * Time.Delta;
-		var hzMovement = movement.WithZ( 0 );
+		_knockTimer += Time.Delta;
 
-		// Trace ahead for walls — use full nav radius and trace the full movement
-		if ( hzMovement.Length > 0.1f )
+		// Tell NavAgent to move in knockback direction — it handles wall avoidance
+		var knockTarget = WorldPosition + _knockVelocity.Normal * 200f;
+		Nav.MaxSpeed = _knockVelocity.Length;
+		Nav.MoveTo( knockTarget );
+
+		// Drag
+		_knockVelocity *= MathF.Pow( 0.02f, Time.Delta );
+
+		// End when slow or timed out
+		if ( _knockVelocity.Length < 15f || _knockTimer > 0.8f )
 		{
-			var wallTrace = Scene.Trace
-				.Ray( WorldPosition + Vector3.Up * 30f, WorldPosition + Vector3.Up * 30f + hzMovement )
-				.Size( Nav.Radius )
-				.IgnoreGameObjectHierarchy( GameObject )
-				.WithoutTags( "trigger", "enemy" )
-				.Run();
-
-			if ( wallTrace.Hit )
-			{
-				// Wall hit — end knockback immediately and snap to navmesh
-				EndKnockback();
-				return;
-			}
+			_inKnockback = false;
+			_knockVelocity = Vector3.Zero;
+			Nav.MaxSpeed = MoveSpeed;
+			Nav.Stop();
 		}
-
-		var newPos = WorldPosition + hzMovement;
-
-		// Ground snap
-		var groundTrace = Scene.Trace
-			.Ray( newPos + Vector3.Up * 50f, newPos + Vector3.Down * 200f )
-			.IgnoreGameObjectHierarchy( GameObject )
-			.WithoutTags( "trigger" )
-			.Run();
-
-		if ( groundTrace.Hit )
-			newPos = newPos.WithZ( groundTrace.HitPosition.z );
-
-		WorldPosition = newPos;
-
-		// Horizontal drag
-		_knockVelocity *= MathF.Pow( 0.05f, Time.Delta );
-
-		if ( _knockVelocity.Length < 10f )
-			EndKnockback();
-	}
-
-	private void EndKnockback()
-	{
-		_inKnockback = false;
-		_knockVelocity = Vector3.Zero;
-
-		// Always snap to valid navmesh — prevents getting stuck in walls
-		var closest = Scene.NavMesh.GetClosestPoint( BBox.FromPositionAndSize( WorldPosition, 500f ) );
-		if ( closest.HasValue )
-			WorldPosition = closest.Value;
-
-		Nav.SetAgentPosition( WorldPosition );
-		Nav.UpdatePosition = true;
 	}
 
 	// --- Separation ---
