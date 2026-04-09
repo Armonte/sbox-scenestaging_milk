@@ -119,29 +119,29 @@ public class SkyboxPaletteWidget : Widget
 		var data = _tool.Session?.Target?.Data;
 		if ( data == null ) return;
 
-		// Open color picker dialog
+		// Open color picker popup
 		var currentColor = data.Palette[slot].ToColor();
-		var picker = new ColorDialog( this );
-		picker.Color = currentColor;
-
-		if ( picker.Exec() )
+		int capturedSlot = slot;
+		ColorPicker.OpenColorPopup( currentColor, c =>
 		{
-			var newColor = picker.Color;
-			data.Palette[slot] = new Color32(
-				(byte)(newColor.r * 255),
-				(byte)(newColor.g * 255),
-				(byte)(newColor.b * 255),
+			var d = _tool.Session?.Target?.Data;
+			if ( d == null ) return;
+
+			d.Palette[capturedSlot] = new Color32(
+				(byte)(c.r * 255),
+				(byte)(c.g * 255),
+				(byte)(c.b * 255),
 				255
 			);
 
-			if ( slot >= data.PaletteUsedCount )
-				data.PaletteUsedCount = slot + 1;
+			if ( capturedSlot >= d.PaletteUsedCount )
+				d.PaletteUsedCount = capturedSlot + 1;
 
 			Update();
-		}
+		}, ScreenRect.BottomLeft );
 	}
 
-	protected override void OnMouseLeave( MouseEvent e )
+	protected override void OnMouseLeave()
 	{
 		_hoveredSlot = -1;
 		Update();
