@@ -22,6 +22,12 @@ public sealed class RoguelitePlayer : Component
 	{
 		var stats = ClassStats.Get( Class );
 		Faction.Faction = global::Faction.Player;
+		Tags.Add( "player" );
+
+		// Walk through enemies — CharacterController ignores "enemy" tagged colliders
+		var cc = Components.Get<CharacterController>();
+		if ( cc.IsValid() )
+			cc.IgnoreLayers.Add( "enemy" );
 
 		// Only host initializes health — clients get it via [Sync]
 		if ( !IsProxy )
