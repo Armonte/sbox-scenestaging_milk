@@ -237,7 +237,10 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = false;
 		Nav.Stop();
 
-		rb.ApplyImpulse( direction.Normal * force );
+		// ApplyImpulse is force/mass = velocity. Multiply by mass so the input
+		// force directly equals the velocity we want regardless of mass.
+		var mass = rb.PhysicsBody?.Mass ?? 10f;
+		rb.ApplyImpulse( direction.Normal * force * mass );
 		_ = EndKnockbackAfterDelay();
 	}
 
