@@ -58,6 +58,11 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
 
+		// Disable rigidbody until needed for knockback — saves physics overhead
+		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( rb.IsValid() )
+			rb.Enabled = false;
+
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
 	}
@@ -262,10 +267,10 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdatePosition = false;
 		Nav.Stop();
 
-		// Flatten to horizontal only — no air launch
-		var flat = direction.WithZ( 0 ).Normal;
+		// Wake up rigidbody for knockback
+		rb.Enabled = true;
 
-		// Set velocity directly instead of impulse — bypasses mass entirely
+		var flat = direction.WithZ( 0 ).Normal;
 		rb.Velocity = flat * force;
 
 		_ = EndKnockback( rb );
@@ -291,9 +296,12 @@ public class RogueliteEnemyBase : Component
 
 		if ( !IsValid ) return;
 
-		// Kill remaining velocity
+		// Kill velocity and put rigidbody back to sleep
 		if ( rb.IsValid() )
-			rb.Velocity = rb.Velocity.WithZ( rb.Velocity.z ) * 0f;
+		{
+			rb.Velocity = Vector3.Zero;
+			rb.Enabled = false;
+		}
 
 		_inKnockback = false;
 		Nav.SetAgentPosition( WorldPosition );
