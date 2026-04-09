@@ -227,6 +227,7 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
+	// Uses CharacterController for wall/floor collision — same as player movement.
 
 	private Vector3 _knockVelocity;
 
@@ -243,50 +244,25 @@ public class RogueliteEnemyBase : Component
 
 	private void UpdateKnockback()
 	{
-		var movement = _knockVelocity * Time.Delta;
-
-		// Wall check — trace at multiple heights to cover full body
-		bool blocked = false;
-		float halfHeight = Nav.Height * 0.5f;
-		float radius = Nav.Radius > 0 ? Nav.Radius : 32f;
-
-		for ( float h = 10f; h <= Nav.Height; h += halfHeight )
+		var cc = Components.Get<CharacterController>();
+		if ( cc is null )
 		{
-			var from = WorldPosition + Vector3.Up * h;
-			var to = from + movement;
+			// No CharacterController — fallback to raw position
+			WorldPosition += _knockVelocity * Time.Delta;
+			_knockVelocity *= 1f - Time.Delta * 5f;
 
-			var wallTrace = Scene.Trace
-				.Ray( from, to )
-				.Size( radius )
-				.IgnoreGameObjectHierarchy( GameObject )
-				.WithoutTags( "trigger", "enemy" )
-				.Run();
-
-			if ( wallTrace.Hit )
+			if ( _knockVelocity.Length < 5f )
 			{
-				blocked = true;
-				break;
+				_inKnockback = false;
+				Nav.SetAgentPosition( WorldPosition );
+				Nav.UpdatePosition = true;
 			}
+			return;
 		}
 
-		if ( blocked )
-		{
-			_knockVelocity = Vector3.Zero;
-		}
-		else
-		{
-			WorldPosition += movement;
-		}
-
-		// Stick to ground
-		var groundTrace = Scene.Trace
-			.Ray( WorldPosition + Vector3.Up * 20f, WorldPosition + Vector3.Down * 200f )
-			.IgnoreGameObjectHierarchy( GameObject )
-			.WithoutTags( "trigger" )
-			.Run();
-
-		if ( groundTrace.Hit )
-			WorldPosition = WorldPosition.WithZ( groundTrace.HitPosition.z );
+		// CharacterController handles walls + floor
+		cc.Velocity = _knockVelocity;
+		cc.Move();
 
 		// Drag
 		_knockVelocity *= 1f - Time.Delta * 5f;
@@ -296,6 +272,7 @@ public class RogueliteEnemyBase : Component
 		{
 			_inKnockback = false;
 			_knockVelocity = Vector3.Zero;
+			cc.Velocity = Vector3.Zero;
 			Nav.SetAgentPosition( WorldPosition );
 			Nav.UpdatePosition = true;
 		}
