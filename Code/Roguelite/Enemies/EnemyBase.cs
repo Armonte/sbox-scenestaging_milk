@@ -81,7 +81,14 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		if ( _inKnockback ) return;
+		// Timer-based updates — no async tasks
+		UpdatePendingDamage();
+
+		if ( _inKnockback )
+		{
+			UpdateKnockback();
+			return;
+		}
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -188,26 +195,35 @@ public class RogueliteEnemyBase : Component
 
 	[Property] public float AttackHitDelay { get; set; } = 0.35f;
 
+	private float _pendingDamageTimer = -1f;
+	private RoguelitePlayer _pendingDamageTarget;
+
 	protected virtual void PerformAttack( RoguelitePlayer target )
 	{
-		// Start the animation first, delay the actual damage
 		PlayAttackAnim();
-		_ = DelayedDamage( target, AttackHitDelay );
+		_pendingDamageTimer = AttackHitDelay;
+		_pendingDamageTarget = target;
 	}
 
-	private async Task DelayedDamage( RoguelitePlayer target, float delay )
+	private void UpdatePendingDamage()
 	{
-		await GameTask.DelaySeconds( delay );
+		if ( _pendingDamageTimer < 0f ) return;
+
+		_pendingDamageTimer -= Time.Delta;
+		if ( _pendingDamageTimer > 0f ) return;
+
+		// Fire
+		_pendingDamageTimer = -1f;
+		var target = _pendingDamageTarget;
+		_pendingDamageTarget = null;
 
 		if ( !IsValid || Health.IsDead ) return;
 		if ( target is null || !target.IsValid() || !target.IsAlive ) return;
 
-		// Re-check range — target may have moved away during windup
 		var dist = WorldPosition.Distance( target.WorldPosition );
 		if ( dist > AttackRange * 1.5f ) return;
 
 		var attack = new AttackData( AttackDamage, DamageType.Blunt );
-
 		var ctx = new HitContext(
 			WorldPosition,
 			(target.WorldPosition - WorldPosition).Normal,
@@ -254,6 +270,8 @@ public class RogueliteEnemyBase : Component
 	// --- Knockback ---
 
 	private bool _inKnockback;
+	private float _knockbackTimer;
+	private Rigidbody _knockbackRb;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
@@ -265,48 +283,38 @@ public class RogueliteEnemyBase : Component
 		if ( !rb.IsValid() ) return;
 
 		_inKnockback = true;
+		_knockbackTimer = 0f;
+		_knockbackRb = rb;
+
 		Nav.UpdatePosition = false;
 		Nav.Stop();
 
-		// Wake up rigidbody for knockback
 		rb.Enabled = true;
-
-		var flat = direction.WithZ( 0 ).Normal;
-		rb.Velocity = flat * force;
-
-		_ = EndKnockback( rb );
+		rb.Velocity = direction.WithZ( 0 ).Normal * force;
 	}
 
-	private async Task EndKnockback( Rigidbody rb )
+	private void UpdateKnockback()
 	{
-		// Wait for rigidbody to slow down or timeout
-		TimeSince elapsed = 0;
-		while ( elapsed < 1f )
-		{
-			if ( !IsValid || Health.IsDead ) return;
-
-			// Sync nav agent position each frame
-			Nav.SetAgentPosition( WorldPosition );
-
-			// Done when slow
-			if ( elapsed > 0.1f && rb.IsValid() && rb.Velocity.WithZ( 0 ).Length < 20f )
-				break;
-
-			await Task.Frame();
-		}
-
-		if ( !IsValid ) return;
-
-		// Kill velocity and put rigidbody back to sleep
-		if ( rb.IsValid() )
-		{
-			rb.Velocity = Vector3.Zero;
-			rb.Enabled = false;
-		}
-
-		_inKnockback = false;
+		_knockbackTimer += Time.Delta;
 		Nav.SetAgentPosition( WorldPosition );
-		Nav.UpdatePosition = true;
+
+		var done = _knockbackTimer > 1f;
+		if ( !done && _knockbackTimer > 0.1f && _knockbackRb.IsValid() )
+			done = _knockbackRb.Velocity.WithZ( 0 ).Length < 20f;
+
+		if ( done )
+		{
+			if ( _knockbackRb.IsValid() )
+			{
+				_knockbackRb.Velocity = Vector3.Zero;
+				_knockbackRb.Enabled = false;
+			}
+
+			_inKnockback = false;
+			_knockbackRb = null;
+			Nav.SetAgentPosition( WorldPosition );
+			Nav.UpdatePosition = true;
+		}
 	}
 
 	// --- Separation ---
