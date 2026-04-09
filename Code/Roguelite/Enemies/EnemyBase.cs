@@ -71,11 +71,7 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		if ( _inKnockback )
-		{
-			UpdateKnockback();
-			return;
-		}
+		if ( _inKnockback ) return;
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -228,32 +224,56 @@ public class RogueliteEnemyBase : Component
 	// --- Knockback ---
 
 	private bool _inKnockback;
-	private Vector3 _knockVelocity;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
+		if ( _inKnockback ) return;
 
-		// Flatten to horizontal, apply force
-		_knockVelocity = direction.WithZ( 0 ).Normal * force;
+		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( !rb.IsValid() ) return;
+
 		_inKnockback = true;
 		Nav.UpdatePosition = false;
 		Nav.Stop();
+
+		// Flatten to horizontal only — no air launch
+		var flat = direction.WithZ( 0 ).Normal;
+
+		// Set velocity directly instead of impulse — bypasses mass entirely
+		rb.Velocity = flat * force;
+
+		_ = EndKnockback( rb );
 	}
 
-	private void UpdateKnockback()
+	private async Task EndKnockback( Rigidbody rb )
 	{
-		WorldPosition += _knockVelocity * Time.Delta;
-		_knockVelocity *= 1f - Time.Delta * 10f;
-
-		if ( _knockVelocity.Length < 5f )
+		// Wait for rigidbody to slow down or timeout
+		TimeSince elapsed = 0;
+		while ( elapsed < 1f )
 		{
-			_inKnockback = false;
-			_knockVelocity = Vector3.Zero;
+			if ( !IsValid || Health.IsDead ) return;
+
+			// Sync nav agent position each frame
 			Nav.SetAgentPosition( WorldPosition );
-			Nav.UpdatePosition = true;
+
+			// Done when slow
+			if ( elapsed > 0.1f && rb.IsValid() && rb.Velocity.WithZ( 0 ).Length < 20f )
+				break;
+
+			await Task.Frame();
 		}
+
+		if ( !IsValid ) return;
+
+		// Kill remaining velocity
+		if ( rb.IsValid() )
+			rb.Velocity = rb.Velocity.WithZ( rb.Velocity.z ) * 0f;
+
+		_inKnockback = false;
+		Nav.SetAgentPosition( WorldPosition );
+		Nav.UpdatePosition = true;
 	}
 
 	// --- Separation ---
