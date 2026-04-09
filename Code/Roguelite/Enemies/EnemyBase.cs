@@ -101,9 +101,9 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
-		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
 		{
+			if ( Nav.Enabled ) { Nav.Stop(); Nav.Enabled = false; }
 			_stunTimer -= Time.Delta;
 			if ( _stunTimer <= 0 )
 				IsStunned = false;
@@ -112,12 +112,21 @@ public class RogueliteEnemyBase : Component
 
 		_attackTimer = MathF.Max( 0, _attackTimer - Time.Delta );
 
-		// Committed to attack — don't move or change state until anim finishes
+		// Committed to attack — disable navmesh entirely, no pathfinding cost
 		if ( IsAttacking )
 		{
-			Nav.Stop();
+			if ( Nav.Enabled )
+			{
+				Nav.Stop();
+				Nav.Enabled = false;
+			}
 			FaceTarget();
 			return;
+		}
+		else if ( !Nav.Enabled )
+		{
+			Nav.Enabled = true;
+			Nav.SetAgentPosition( WorldPosition );
 		}
 
 		// Passive enemies just idle
@@ -282,12 +291,13 @@ public class RogueliteEnemyBase : Component
 
 	// --- LOD ---
 
-	private const float LodClose = 800f;       // Full rate
-	private const float LodMedium = 1500f;      // Every 3 frames
-	private const float LodFar = 2500f;         // Every 6 frames
-	private const float LodCull = 4000f;        // Disabled entirely
+	private const float LodClose = 800f;
+	private const float LodMedium = 1500f;
+	private const float LodFar = 2500f;
+	private const float LodCull = 4000f;
 	private int _lodFrameCounter;
 	private bool _shouldAnimate;
+	private bool _isClose; // Within close LOD — full AI rate
 
 	private void UpdateLOD()
 	{
@@ -299,17 +309,23 @@ public class RogueliteEnemyBase : Component
 		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
 		_lodFrameCounter++;
 
-		if ( distSq > LodCull * LodCull )
+		// Viewport check — is this enemy in front of the camera?
+		var toEnemy = (WorldPosition - cam.WorldPosition).Normal;
+		var inView = Vector3.Dot( cam.WorldRotation.Forward, toEnemy ) > 0f; // In front hemisphere
+
+		if ( distSq > LodCull * LodCull || !inView )
 		{
 			_model.Enabled = false;
 			_shouldAnimate = false;
+			_isClose = false;
 		}
 		else
 		{
 			_model.Enabled = true;
+			_isClose = distSq < LodClose * LodClose;
 
-			if ( distSq < LodClose * LodClose )
-				_shouldAnimate = true; // Every frame
+			if ( _isClose )
+				_shouldAnimate = true;
 			else if ( distSq < LodMedium * LodMedium )
 				_shouldAnimate = _lodFrameCounter % 3 == 0;
 			else
