@@ -133,11 +133,6 @@ public class RogueliteEnemyBase : Component
 			return;
 		}
 
-		// Throttle brain by distance — close=every 2 frames, far=every 10
-		var brainInterval = _isClose ? 2 : 10;
-		if ( _lodFrameCounter % brainInterval != 0 )
-			return;
-
 		Brain.Tick();
 
 		var needsNav = Brain.State == EnemyBrainState.Chase || Brain.State == EnemyBrainState.Flee;
@@ -318,12 +313,14 @@ public class RogueliteEnemyBase : Component
 	// --- LOD ---
 
 	private const float LodClose = 800f;
-	private const float LodMedium = 1500f;
-	private const float LodFar = 2500f;
-	private const float LodCull = 4000f;
+	private const float LodCull = 3000f;
 	private int _lodFrameCounter;
 	private bool _shouldAnimate;
-	private bool _isClose; // Within close LOD — full AI rate
+	private bool _isClose;
+
+	// Shared enemy density counter — updated once per frame by first enemy to tick
+	private static int _frameId;
+	private static int _nearbyEnemyCount;
 
 	private void UpdateLOD()
 	{
@@ -332,31 +329,45 @@ public class RogueliteEnemyBase : Component
 		var cam = Scene.Camera;
 		if ( cam is null ) return;
 
-		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
 		_lodFrameCounter++;
 
-		// Viewport check — is this enemy in front of the camera?
+		// Reset density counter once per frame
+		var currentFrame = Time.Tick;
+		if ( _frameId != currentFrame )
+		{
+			_frameId = currentFrame;
+			_nearbyEnemyCount = 0;
+		}
+
+		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
+
+		// Viewport check
 		var toEnemy = (WorldPosition - cam.WorldPosition).Normal;
-		var inView = Vector3.Dot( cam.WorldRotation.Forward, toEnemy ) > 0f; // In front hemisphere
+		var inView = Vector3.Dot( cam.WorldRotation.Forward, toEnemy ) > -0.2f;
 
 		if ( distSq > LodCull * LodCull || !inView )
 		{
 			_model.Enabled = false;
 			_shouldAnimate = false;
 			_isClose = false;
+			return;
 		}
-		else
-		{
-			_model.Enabled = true;
-			_isClose = distSq < LodClose * LodClose;
 
-			if ( _isClose )
-				_shouldAnimate = true;
-			else if ( distSq < LodMedium * LodMedium )
-				_shouldAnimate = _lodFrameCounter % 3 == 0;
-			else
-				_shouldAnimate = _lodFrameCounter % 6 == 0;
-		}
+		_model.Enabled = true;
+		_isClose = distSq < LodClose * LodClose;
+
+		if ( _isClose )
+			_nearbyEnemyCount++;
+
+		// Animation rate scales with density — more enemies = lower rate
+		// 1-10 nearby: every 2 frames, 10-30: every 4, 30+: every 8
+		int animInterval;
+		if ( _isClose )
+			animInterval = _nearbyEnemyCount > 30 ? 8 : _nearbyEnemyCount > 10 ? 4 : 2;
+		else
+			animInterval = 8;
+
+		_shouldAnimate = _lodFrameCounter % animInterval == 0;
 	}
 
 	// --- Knockback ---
