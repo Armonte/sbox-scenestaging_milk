@@ -70,7 +70,12 @@ public class RogueliteEnemyBase : Component
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
-		if ( _inKnockback ) return;
+
+		if ( _inKnockback )
+		{
+			UpdateKnockback();
+			return;
+		}
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -223,37 +228,32 @@ public class RogueliteEnemyBase : Component
 	// --- Knockback ---
 
 	private bool _inKnockback;
+	private Vector3 _knockVelocity;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
-		if ( _inKnockback ) return;
 
-		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( !rb.IsValid() ) return;
-
+		// Flatten to horizontal, apply force
+		_knockVelocity = direction.WithZ( 0 ).Normal * force;
 		_inKnockback = true;
 		Nav.UpdatePosition = false;
 		Nav.Stop();
-
-		// ApplyImpulse is force/mass = velocity. Multiply by mass so the input
-		// force directly equals the velocity we want regardless of mass.
-		var mass = rb.PhysicsBody?.Mass ?? 10f;
-		rb.ApplyImpulse( direction.Normal * force * mass );
-		_ = EndKnockbackAfterDelay();
 	}
 
-	private async Task EndKnockbackAfterDelay()
+	private void UpdateKnockback()
 	{
-		// Let physics run
-		await GameTask.DelaySeconds( 0.4f );
+		WorldPosition += _knockVelocity * Time.Delta;
+		_knockVelocity *= 1f - Time.Delta * 10f;
 
-		if ( !IsValid ) return;
-
-		_inKnockback = false;
-		Nav.SetAgentPosition( WorldPosition );
-		Nav.UpdatePosition = true;
+		if ( _knockVelocity.Length < 5f )
+		{
+			_inKnockback = false;
+			_knockVelocity = Vector3.Zero;
+			Nav.SetAgentPosition( WorldPosition );
+			Nav.UpdatePosition = true;
+		}
 	}
 
 	// --- Separation ---
