@@ -17,12 +17,6 @@ public sealed class RogueliteHealthComponent : Component
 	public event Action<float, DamageType, Component> OnDamageTakenFull;
 	public event Action<float> OnHealed;
 
-	protected override void OnStart()
-	{
-		Current = MaxHealth;
-		IsDead = false;
-	}
-
 	public void Init( float maxHp )
 	{
 		MaxHealth = maxHp;

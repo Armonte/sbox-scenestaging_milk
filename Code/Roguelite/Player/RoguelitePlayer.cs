@@ -20,11 +20,15 @@ public sealed class RoguelitePlayer : Component
 
 	protected override void OnStart()
 	{
-		// Init from class stats
 		var stats = ClassStats.Get( Class );
-		Health.Init( stats.MaxHp );
-		Movement.InitFromClass( stats );
 		Faction.Faction = global::Faction.Player;
+
+		// Only host initializes health — clients get it via [Sync]
+		if ( !IsProxy )
+		{
+			Health.Init( stats.MaxHp );
+			Movement.InitFromClass( stats );
+		}
 
 		// Find weapon on this GameObject or children
 		ActiveWeapon = Components.Get<WeaponBase>( FindMode.EverythingInSelfAndDescendants );
