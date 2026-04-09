@@ -8,7 +8,6 @@
 public class RogueliteEnemyBase : Component
 {
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
-	[RequireComponent] public Rigidbody Body { get; set; }
 	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
 	[RequireComponent] public FactionComponent Faction { get; set; }
 	[RequireComponent] public AggroComponent Aggro { get; set; }
@@ -64,10 +63,6 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
 
-		// Rigidbody is kinematic normally — only goes dynamic for knockback
-		Body.MotionEnabled = false;
-		Body.Gravity = false;
-
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
 	}
@@ -82,8 +77,11 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		// Knockback is handled by async DoKnockback — just skip brain while active
-		if ( _inKnockback ) return;
+		if ( _inKnockback )
+		{
+			UpdateKnockback();
+			return;
+		}
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -228,71 +226,36 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
-	// Uses Rigidbody for real physics knockback. Pattern from s&box NavigationLinkTraversal.PhysicsJump.
-	// Flow: disable NavAgent → enable Rigidbody → set velocity → physics handles walls →
-	//       detect landing → disable Rigidbody → re-enable NavAgent
 
-	[Property, Title( "Knockback Resistance" )] public float KnockbackResistance { get; set; } = 1f;
+	private Vector3 _knockVelocity;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
-		if ( _inKnockback ) return;
-
-		// Scale force by resistance (heavier enemies get knocked less)
-		var effectiveForce = force / KnockbackResistance;
-		if ( effectiveForce < 10f ) return; // Too weak, ignore
 
 		_inKnockback = true;
-		_ = RunKnockback( direction.WithZ( 0 ).Normal, effectiveForce );
-	}
-
-	private async Task RunKnockback( Vector3 direction, float force )
-	{
-		// 1. Switch from NavAgent to Rigidbody
+		_knockVelocity = direction.WithZ( 0 ).Normal * force;
 		Nav.UpdatePosition = false;
 		Nav.Stop();
-		Body.MotionEnabled = true;
-		Body.Gravity = true;
+	}
 
-		// 2. Apply velocity — horizontal push + slight upward pop
-		Body.Velocity = direction * force + Vector3.Up * MathF.Min( force * 0.15f, 100f );
+	private void UpdateKnockback()
+	{
+		// Move
+		WorldPosition += _knockVelocity * Time.Delta;
 
-		// 3. Wait for physics to settle
-		TimeSince elapsed = 0;
-		while ( elapsed < 2f )
+		// Drag
+		_knockVelocity *= 1f - Time.Delta * 8f;
+
+		// Done
+		if ( _knockVelocity.Length < 5f )
 		{
-			if ( !IsValid || Health.IsDead )
-			{
-				_inKnockback = false;
-				return;
-			}
-
+			_inKnockback = false;
+			_knockVelocity = Vector3.Zero;
 			Nav.SetAgentPosition( WorldPosition );
-
-			// Landed: on ground + slow enough
-			if ( elapsed > 0.1f )
-			{
-				var grounded = Scene.Trace
-					.Ray( WorldPosition + Vector3.Up * 5f, WorldPosition + Vector3.Down * 15f )
-					.IgnoreGameObjectHierarchy( GameObject )
-					.Run();
-
-				if ( grounded.Hit && Body.Velocity.Length < 50f )
-					break;
-			}
-
-			await Task.Frame();
+			Nav.UpdatePosition = true;
 		}
-
-		// 4. Switch back to NavAgent
-		Body.Velocity = Vector3.Zero;
-		Body.MotionEnabled = false;
-		Body.Gravity = false;
-		Nav.SetAgentPosition( WorldPosition );
-		Nav.UpdatePosition = true;
-		_inKnockback = false;
 	}
 
 	// --- Separation ---
