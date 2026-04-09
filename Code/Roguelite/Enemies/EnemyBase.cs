@@ -23,7 +23,6 @@ public class RogueliteEnemyBase : Component
 
 	[Sync] public bool IsStunned { get; set; }
 	[Sync] public bool IsMoving { get; set; }
-	[Sync] public bool IsAttacking { get; set; }
 
 	public RoguelitePlayer CurrentTarget;
 
@@ -215,6 +214,7 @@ public class RogueliteEnemyBase : Component
 		DamageResolver.Resolve( attack, this, target.GameObject, ctx );
 	}
 
+	private bool IsAttacking;
 	private float _attackAnimTimer;
 
 	protected void PlayAttackAnim()
