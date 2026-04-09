@@ -82,7 +82,7 @@ public sealed class BowWeapon : WeaponBase
 		}
 	}
 
-	[Property] public float KnockbackForce { get; set; } = 150f;
+	[Property] public float KnockbackForce { get; set; } = 400f;
 
 	private void FireArrow( float damageMultiplier )
 	{

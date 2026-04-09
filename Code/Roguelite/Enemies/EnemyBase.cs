@@ -247,7 +247,7 @@ public class RogueliteEnemyBase : Component
 		WorldPosition += _knockVelocity * Time.Delta;
 
 		// Drag
-		_knockVelocity *= 1f - Time.Delta * 8f;
+		_knockVelocity *= 1f - Time.Delta * 5f;
 
 		// Done
 		if ( _knockVelocity.Length < 5f )
