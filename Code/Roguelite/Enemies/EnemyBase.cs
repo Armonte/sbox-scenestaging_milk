@@ -22,6 +22,8 @@ public class RogueliteEnemyBase : Component
 	[Property, Title( "Passive (No AI)" )] public bool IsPassive { get; set; } = false;
 
 	[Sync] public bool IsStunned { get; set; }
+	[Sync] public bool IsMoving { get; set; }
+	[Sync] public bool IsAttacking { get; set; }
 
 	public RoguelitePlayer CurrentTarget;
 
@@ -68,6 +70,9 @@ public class RogueliteEnemyBase : Component
 
 	protected override void OnUpdate()
 	{
+		// Animation runs on ALL clients
+		UpdateAnimation();
+
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
@@ -201,16 +206,21 @@ public class RogueliteEnemyBase : Component
 		DamageResolver.Resolve( attack, this, target.GameObject, ctx );
 	}
 
-	private bool _isAttacking;
 	private float _attackAnimTimer;
 
 	protected void PlayAttackAnim()
+	{
+		IsAttacking = true;
+		BroadcastAttackAnim();
+	}
+
+	[Rpc.Broadcast]
+	private void BroadcastAttackAnim()
 	{
 		if ( _model is null ) return;
 		_model.Sequence.Name = "attack";
 		_model.Sequence.Time = 0;
 		_model.Sequence.Looping = false;
-		_isAttacking = true;
 		_attackAnimTimer = _model.Sequence.Duration;
 		if ( _attackAnimTimer <= 0 ) _attackAnimTimer = 0.8f;
 	}
@@ -343,22 +353,19 @@ public class RogueliteEnemyBase : Component
 		if ( _model is null ) return;
 
 		// Attack anim playing — let it finish
-		if ( _isAttacking )
+		if ( IsAttacking )
 		{
 			_attackAnimTimer -= Time.Delta;
 			if ( _attackAnimTimer <= 0 )
-				_isAttacking = false;
+				IsAttacking = false;
 			return;
 		}
 
-		// Pick sequence based on actual movement
-		var speed = Nav.Velocity.WithZ( 0 ).Length;
-		string desired;
+		// Use synced IsMoving flag so clients can animate too
+		if ( Networking.IsHost )
+			IsMoving = Nav.Velocity.WithZ( 0 ).Length > 5f;
 
-		if ( speed > 5f )
-			desired = "walk_N";
-		else
-			desired = "idle";
+		string desired = IsMoving ? "walk_N" : "idle";
 
 		if ( _model.Sequence.Name != desired )
 		{

@@ -59,6 +59,13 @@ public sealed class PlayerCamera : Component
 			}
 		}
 
+		// Rotate body to face eye direction — runs for ALL players (including proxies)
+		// so other clients see us facing the right way. EyeAngles is [Sync]'d.
+		var targetYaw = new Angles( 0, EyeAngles.yaw, 0 ).ToRotation();
+		var body = Components.Get<SkinnedModelRenderer>( FindMode.EverythingInSelfAndDescendants );
+		if ( body.IsValid() )
+			body.WorldRotation = Rotation.Lerp( body.WorldRotation, targetYaw, Time.Delta * 10f );
+
 		// Body visibility — same pattern as Facepunch PlayerController.
 		// Tags.Set("viewer", bool) on the body GameObject.
 		// The scene camera automatically excludes "viewer" tagged objects.
