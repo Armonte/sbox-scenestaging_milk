@@ -228,10 +228,25 @@ public class RogueliteEnemyBase : Component
 		if ( Health.IsDead ) return;
 
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( rb.IsValid() )
-		{
-			rb.ApplyImpulse( direction.Normal * force );
-		}
+		if ( !rb.IsValid() ) return;
+
+		// Nav overrides position every frame — disable it during knockback
+		Nav.UpdatePosition = false;
+		Nav.Stop();
+
+		rb.ApplyImpulse( direction.Normal * force );
+
+		// Re-enable nav after physics settles
+		_ = ReenableNav();
+	}
+
+	private async Task ReenableNav()
+	{
+		await GameTask.DelaySeconds( 0.5f );
+		if ( !IsValid ) return;
+
+		Nav.SetAgentPosition( WorldPosition );
+		Nav.UpdatePosition = true;
 	}
 
 	// --- Separation ---
