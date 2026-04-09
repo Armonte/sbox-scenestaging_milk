@@ -57,11 +57,6 @@ public class RogueliteEnemyBase : Component
 		Nav.UpdateRotation = false;
 		Nav.MaxSpeed = MoveSpeed;
 
-		// Ensure rigidbody has mass for knockback impulses
-		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( rb.IsValid() && rb.PhysicsBody is not null && rb.PhysicsBody.Mass <= 0f )
-			rb.PhysicsBody.Mass = 80f;
-
 		Brain = CreateBrain();
 		GameObject.Name = EnemyName;
 	}
@@ -76,6 +71,11 @@ public class RogueliteEnemyBase : Component
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
+		if ( _inKnockback )
+		{
+			UpdateKnockback();
+			return;
+		}
 
 		// Stun timer management (brain reports Stunned state, but timer lives here)
 		if ( IsStunned )
@@ -226,34 +226,38 @@ public class RogueliteEnemyBase : Component
 	}
 
 	// --- Knockback ---
+	// Simple: offset the NavAgent's target position. The agent slides there
+	// naturally using its own pathfinding and wall avoidance.
+
+	private Vector3 _knockOffset;
+	private bool _inKnockback;
 
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
 		if ( Health.IsDead ) return;
 
-		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
-		if ( !rb.IsValid() ) return;
-
-		// Nav overrides position every frame — disable it during knockback
-		Nav.UpdatePosition = false;
-		Nav.Stop();
-
-		// Lift slightly off ground so friction doesn't hold us
-		rb.ApplyImpulse( (direction.Normal + Vector3.Up * 0.3f).Normal * force );
-		Log.Info( $"[Knockback] Applied impulse {force} to {GameObject.Name}, rb.MotionEnabled={rb.MotionEnabled}, mass={rb.PhysicsBody?.Mass}" );
-
-		// Re-enable nav after physics settles
-		_ = ReenableNav();
+		// Push the enemy by offsetting where NavAgent thinks it should be
+		_knockOffset = direction.WithZ( 0 ).Normal * force * 0.5f;
+		_inKnockback = true;
 	}
 
-	private async Task ReenableNav()
+	private void UpdateKnockback()
 	{
-		await GameTask.DelaySeconds( 0.5f );
-		if ( !IsValid ) return;
+		// Move NavAgent target to the offset position — it handles walls/ground
+		var target = WorldPosition + _knockOffset;
+		Nav.MaxSpeed = _knockOffset.Length * 3f;
+		Nav.MoveTo( target );
 
-		Nav.SetAgentPosition( WorldPosition );
-		Nav.UpdatePosition = true;
+		// Decay
+		_knockOffset *= 1f - Time.Delta * 6f;
+
+		if ( _knockOffset.Length < 2f )
+		{
+			_inKnockback = false;
+			_knockOffset = Vector3.Zero;
+			Nav.MaxSpeed = MoveSpeed;
+		}
 	}
 
 	// --- Separation ---
