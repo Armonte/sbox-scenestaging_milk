@@ -15,10 +15,10 @@ public sealed class CubeAbility : IAbility
 	{
 		if ( target is null ) return false;
 
-		var targetFaction = target.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
-		if ( targetFaction is null ) return false;
+		var targetDamageable = target.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		if ( targetDamageable is null ) return false;
 
-		if ( caster.Faction.IsHostile( targetFaction ) )
+		if ( caster.Faction != targetDamageable.Faction )
 		{
 			// Enemy: stun
 			var enemy = target.Components.Get<RogueliteEnemyBase>( FindMode.EverythingInSelfAndDescendants );

@@ -50,7 +50,7 @@ public class FlyingEnemy : RogueliteEnemyBase
 		_bobOffset = MathF.Sin( _bobTimer * BobFrequency * MathF.PI * 2f ) * BobAmplitude;
 
 		// Drive swoop movement every frame regardless of brain state
-		if ( _isSwooping && Networking.IsHost && !Health.IsDead )
+		if ( _isSwooping && Networking.IsHost && !IsDead )
 		{
 			UpdateSwoop();
 			UpdateAnimation();
@@ -60,7 +60,7 @@ public class FlyingEnemy : RogueliteEnemyBase
 		base.OnUpdate();
 
 		// Apply bob after base movement (so it stacks on top of hover position)
-		if ( !_isSwooping && Networking.IsHost && !Health.IsDead )
+		if ( !_isSwooping && Networking.IsHost && !IsDead )
 			WorldPosition += Vector3.Up * _bobOffset * Time.Delta * 5f;
 	}
 
@@ -218,7 +218,7 @@ public class FlyingEnemy : RogueliteEnemyBase
 	{
 		foreach ( var other in Scene.GetAllComponents<FlyingEnemy>() )
 		{
-			if ( other == this || other.Health.IsDead ) continue;
+			if ( other == this || other.IsDead ) continue;
 
 			var diff = (WorldPosition - other.WorldPosition).WithZ( 0 );
 			var dist = diff.Length;

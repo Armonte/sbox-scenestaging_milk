@@ -5,13 +5,19 @@
 /// </summary>
 [Title( "Roguelite Enemy" )]
 [Icon( "pest_control" )]
-public class RogueliteEnemyBase : Component
+public class RogueliteEnemyBase : Component, IDamageable
 {
 	[RequireComponent] public NavMeshAgent Nav { get; set; }
-	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
-	[RequireComponent] public FactionComponent Faction { get; set; }
 
-	// Inlined aggro — was a separate component, now just fields
+	// Inlined health — was RogueliteHealthComponent
+	[Property] public float HealthMax { get; set; } = 100f;
+	[Sync] public float HealthCurrent { get; set; }
+	[Sync] public bool IsDead { get; set; }
+
+	// Inlined faction — always Enemy
+	public Faction Faction => global::Faction.Enemy;
+
+	// Inlined aggro
 	[Property] public TargetStrategy AggroStrategy { get; set; } = TargetStrategy.HighestThreat;
 	private readonly Dictionary<GameObject, float> _threatTable = new();
 	private const float ThreatDecayRate = 0.998f;
@@ -28,6 +34,8 @@ public class RogueliteEnemyBase : Component
 	[Sync] public bool IsStunned { get; set; }
 	[Sync] public bool IsMoving { get; set; }
 
+	public event Action OnDeathEvent;
+
 	public RoguelitePlayer CurrentTarget;
 
 	protected EnemyBrain Brain;
@@ -38,21 +46,17 @@ public class RogueliteEnemyBase : Component
 
 	protected override void OnStart()
 	{
-		Faction.Faction = global::Faction.Enemy;
-
 		Tags.Add( "enemy" );
 
-		// Trigger colliders don't push each other but still get hit by traces
 		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
 		{
 			col.IsTrigger = true;
 			col.Tags.Add( "enemy" );
 		}
 
-		Health.Init( Health.MaxHealth );
-		Health.OnDeath += OnDeath;
-
-		Health.OnDamageTakenFull += OnDamageTakenFull;
+		// Init health
+		HealthCurrent = HealthMax;
+		IsDead = false;
 
 		_model = Components.Get<SkinnedModelRenderer>( FindMode.EverythingInSelfAndDescendants );
 
@@ -97,7 +101,7 @@ public class RogueliteEnemyBase : Component
 			UpdateAnimation();
 
 		if ( !Networking.IsHost ) return;
-		if ( Health.IsDead ) return;
+		if ( IsDead ) return;
 
 		// Pending damage always checks (timer-based, cheap)
 		UpdatePendingDamage();
@@ -260,7 +264,7 @@ public class RogueliteEnemyBase : Component
 		var target = _pendingDamageTarget;
 		_pendingDamageTarget = null;
 
-		if ( !IsValid || Health.IsDead ) return;
+		if ( !IsValid || IsDead ) return;
 		if ( target is null || !target.IsValid() || !target.IsAlive ) return;
 
 		var dist = WorldPosition.Distance( target.WorldPosition );
@@ -304,10 +308,20 @@ public class RogueliteEnemyBase : Component
 			_attackAnimTimer = _model.Sequence.Duration;
 	}
 
-	private void OnDamageTakenFull( float amount, DamageType type, Component attacker )
+	public void ApplyDamage( float amount, DamageType type, Component attacker )
 	{
+		if ( IsDead ) return;
+
+		HealthCurrent = MathF.Max( 0, HealthCurrent - amount );
+
 		if ( attacker is not null )
 			RecordThreat( attacker.GameObject, amount );
+
+		if ( HealthCurrent <= 0 )
+		{
+			IsDead = true;
+			OnDeath();
+		}
 	}
 
 	// --- Inlined Aggro ---
@@ -360,7 +374,7 @@ public class RogueliteEnemyBase : Component
 			float score = AggroStrategy switch
 			{
 				TargetStrategy.HighestThreat => GetThreat( p.GameObject ),
-				TargetStrategy.LowestHP => -p.Health.Current,
+				TargetStrategy.LowestHP => -p.HealthCurrent,
 				TargetStrategy.Nearest => -WorldPosition.DistanceSquared( p.WorldPosition ),
 				_ => GetThreat( p.GameObject )
 			};
@@ -448,7 +462,7 @@ public class RogueliteEnemyBase : Component
 	public void ApplyKnockback( Vector3 direction, float force )
 	{
 		if ( !Networking.IsHost ) return;
-		if ( Health.IsDead ) return;
+		if ( IsDead ) return;
 		if ( _inKnockback ) return;
 
 		var rb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
@@ -500,7 +514,7 @@ public class RogueliteEnemyBase : Component
 
 		foreach ( var other in Scene.GetAllComponents<RogueliteEnemyBase>() )
 		{
-			if ( other == this || other.Health.IsDead ) continue;
+			if ( other == this || other.IsDead ) continue;
 
 			var diff = WorldPosition - other.WorldPosition;
 			var dist = diff.WithZ( 0 ).Length;

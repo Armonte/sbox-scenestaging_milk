@@ -13,11 +13,14 @@
     <Project Path="Libraries/ShatterGlass/Code/shatterglass.csproj" />
     <Project Path="Libraries/SplineTools/Code/splinetools.csproj" />
     <Project Path="Libraries/SplineTools/Editor/splinetools.editor.csproj" />
+    <Project Path="Libraries/VertexSkybox/Code/vertexskybox.csproj" />
+    <Project Path="Libraries/VertexSkybox/Editor/vertexskybox.editor.csproj" />
     <Project Path="Libraries/weaponlab/Code/weaponlab.csproj" />
   </Folder>
   <Folder Name="/Tools/">
     <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/addons/tools/Code/Base Editor Library.csproj" />
     <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/editor/ActionGraph/Code/actiongraph.csproj" />
+    <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/editor/DooEditor/Code/dooeditor.csproj" />
     <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/editor/Hammer/Code/hammer.csproj" />
     <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/editor/MovieMaker/Code/moviemaker.csproj" />
     <Project Path="../../../Program Files (x86)/Steam/steamapps/common/sbox/editor/ShaderGraph/Code/shadergraph.csproj" />

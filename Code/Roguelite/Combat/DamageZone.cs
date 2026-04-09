@@ -75,13 +75,12 @@ public class DamageZone : Component
 		foreach ( var target in targets )
 		{
 			var entityRoot = FindEntityRoot( target );
-			var faction = entityRoot.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
+			var damageable = entityRoot.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
 
-			if ( faction is null ) continue;
+			if ( damageable is null ) continue;
 
-			// Filter by who we affect
-			if ( faction.Faction == global::Faction.Player && !AffectsPlayers ) continue;
-			if ( faction.Faction == global::Faction.Enemy && !AffectsEnemies ) continue;
+			if ( damageable.Faction == global::Faction.Player && !AffectsPlayers ) continue;
+			if ( damageable.Faction == global::Faction.Enemy && !AffectsEnemies ) continue;
 
 			var attack = new AttackData( DamagePerTick, Type, canCrit: false,
 				canKnockback: KnockbackForce > 0, knockbackForce: KnockbackForce );
@@ -101,7 +100,7 @@ public class DamageZone : Component
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<RogueliteHealthComponent>() is not null )
+			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

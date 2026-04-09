@@ -47,7 +47,7 @@ public class SummonerEnemy : RogueliteEnemyBase
 		CleanupDeadMinions();
 
 		// Casting: play point anim to frame 11, hold until cast finishes
-		if ( _isCasting && Networking.IsHost && !Health.IsDead )
+		if ( _isCasting && Networking.IsHost && !IsDead )
 		{
 			Nav.Stop();
 
@@ -86,7 +86,7 @@ public class SummonerEnemy : RogueliteEnemyBase
 		}
 
 		// Recovery: brief pause after summon before resuming AI
-		if ( _isRecovering && Networking.IsHost && !Health.IsDead )
+		if ( _isRecovering && Networking.IsHost && !IsDead )
 		{
 			Nav.Stop();
 			_castTimer -= Time.Delta;

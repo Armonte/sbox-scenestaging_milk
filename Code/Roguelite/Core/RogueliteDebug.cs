@@ -146,7 +146,7 @@ public sealed class RogueliteDebug : Component
 		// E+Jump — Heal
 		if ( Input.Pressed( "Jump" ) )
 		{
-			_localPlayer.Health.Heal( _localPlayer.Health.MaxHealth );
+			_localPlayer.Heal( _localPlayer.HealthMax );
 			Log.Info( "[Debug] Healed to full" );
 		}
 
@@ -155,7 +155,7 @@ public sealed class RogueliteDebug : Component
 		{
 			var enemies = Scene.GetAllComponents<RogueliteEnemyBase>().ToList();
 			foreach ( var e in enemies )
-				e.Health.ForceKill();
+				e.ApplyDamage( e.HealthCurrent, DamageType.True, null );
 			Log.Info( $"[Debug] Killed {enemies.Count} enemies" );
 		}
 
@@ -231,8 +231,6 @@ public sealed class RogueliteDebug : Component
 		model.Model = Model.Load( "models/citizen/citizen.vmdl" );
 
 		go.Components.Create<NavMeshAgent>();
-		go.Components.Create<RogueliteHealthComponent>();
-		go.Components.Create<FactionComponent>();
 		go.Components.Create<CapsuleCollider>();
 
 		switch ( name )
@@ -241,17 +239,17 @@ public sealed class RogueliteDebug : Component
 				var rusher = go.Components.Create<RusherEnemy>();
 				rusher.AttackDamage = 30f;
 				rusher.MoveSpeed = 200f;
-				rusher.Health.Init( 150f );
+				rusher.HealthMax = 150f;
 				break;
 
 			case "Flyer":
 				var flyer = go.Components.Create<FlyingEnemy>();
-				flyer.Health.Init( 80f );
+				flyer.HealthMax = 80f;
 				break;
 
 			case "Summoner":
 				var summoner = go.Components.Create<SummonerEnemy>();
-				summoner.Health.Init( 200f );
+				summoner.HealthMax = 200f;
 				if ( MinionPrefab is not null )
 					summoner.MinionPrefab = MinionPrefab;
 				else if ( EnemyPrefab is not null )
@@ -260,7 +258,7 @@ public sealed class RogueliteDebug : Component
 
 			default:
 				var basic = go.Components.Create<RogueliteEnemyBase>();
-				basic.Health.Init( 100f );
+				basic.HealthMax = 100f;
 				break;
 		}
 
@@ -271,7 +269,7 @@ public sealed class RogueliteDebug : Component
 	private RogueliteEnemyBase FindNearestEnemy()
 	{
 		return Scene.GetAllComponents<RogueliteEnemyBase>()
-			.Where( e => !e.Health.IsDead )
+			.Where( e => !e.IsDead )
 			.OrderBy( e => _localPlayer.WorldPosition.Distance( e.WorldPosition ) )
 			.FirstOrDefault();
 	}

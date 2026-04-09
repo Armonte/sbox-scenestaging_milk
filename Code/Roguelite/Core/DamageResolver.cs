@@ -18,14 +18,10 @@ public readonly struct DamageResult
 }
 
 /// <summary>
-/// Central damage authority. ALL damage in the game flows through this class.
-/// No exceptions — weapons, abilities, DoTs, environmental damage all call here.
+/// Central damage authority. Uses IDamageable interface — no component lookups.
 /// </summary>
 public static class DamageResolver
 {
-	/// <summary>
-	/// Resolve a single attack against a target. Returns the result of the damage calculation.
-	/// </summary>
 	public static DamageResult Resolve(
 		AttackData attack,
 		Component attacker,
@@ -34,22 +30,18 @@ public static class DamageResolver
 	{
 		if ( targetObject is null ) return default;
 
-		// Walk up the hierarchy to find the root entity with HealthComponent
-		// (traces often hit child models, but components live on the root)
 		targetObject = FindEntityRoot( targetObject );
 
-		var health = targetObject.Components.Get<RogueliteHealthComponent>( FindMode.EverythingInSelfAndDescendants );
-		if ( health is null || health.IsDead )
+		var target = targetObject.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		if ( target is null || target.IsDead )
 			return default;
 
-		var attackerFaction = attacker.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
-		var targetFaction = targetObject.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
-
-		// Don't damage friendlies
-		if ( attackerFaction is not null && targetFaction is not null )
+		// Faction check
+		var attackerDamageable = attacker.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		if ( attackerDamageable is not null )
 		{
-			if ( !attackerFaction.IsHostile( targetFaction ) )
-				return default;
+			if ( attackerDamageable.Faction == target.Faction )
+				return default; // Friendly fire blocked
 		}
 
 		var dmg = attack.BaseDamage;
@@ -70,24 +62,19 @@ public static class DamageResolver
 		if ( ctx.IsHeadshot )
 			dmg *= 1.25f;
 
-		// 4. Floor at 0 damage
+		// 4. Floor at 0
 		dmg = MathF.Max( 0f, dmg );
 
 		// 5. Apply damage
-		health.ApplyDamage( dmg, attack.Type, attacker );
+		target.ApplyDamage( dmg, attack.Type, attacker );
 
 		// 6. Knockback
 		if ( attack.CanKnockback && attack.KnockbackForce > 0 )
-			ApplyKnockback( targetObject, ctx.Direction, attack.KnockbackForce );
+			target.ApplyKnockback( ctx.Direction, attack.KnockbackForce );
 
-		// Log.Info( $"[DamageResolver] {attacker.GameObject.Name} hit {targetObject.Name} for {dmg:F0} {attack.Type} damage{(isCrit ? " (CRIT!)" : "")}{(ctx.IsBackstab ? " (backstab)" : "")} — HP: {health.Current:F0}/{health.MaxHealth:F0}" );
-
-		return new DamageResult( dmg, isCrit, health.IsDead, ctx );
+		return new DamageResult( dmg, isCrit, target.IsDead, ctx );
 	}
 
-	/// <summary>
-	/// Convenience: trace a melee arc from the attacker and resolve damage on all hits.
-	/// </summary>
 	public static List<DamageResult> MeleeTrace(
 		Component attacker,
 		AttackData attack,
@@ -102,17 +89,8 @@ public static class DamageResolver
 
 		if ( player is not null )
 		{
-			var camera = player.Components.Get<PlayerCamera>();
-			if ( camera is not null )
-			{
-				eyePos = attacker.WorldPosition + Vector3.Up * 64f;
-				forward = camera.EyeAngles.ToRotation().Forward;
-			}
-			else
-			{
-				eyePos = attacker.WorldPosition + Vector3.Up * 64f;
-				forward = attacker.WorldRotation.Forward;
-			}
+			eyePos = attacker.WorldPosition + Vector3.Up * 64f;
+			forward = player.Camera.EyeAngles.ToRotation().Forward;
 		}
 		else
 		{
@@ -129,7 +107,6 @@ public static class DamageResolver
 
 		if ( tr.Hit && tr.GameObject is not null )
 		{
-			Log.Info( $"[MeleeTrace] Hit: {tr.GameObject.Name} (has Health: {tr.GameObject.Components.Get<RogueliteHealthComponent>( FindMode.EverythingInSelfAndDescendants ) is not null}, has Faction: {tr.GameObject.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants ) is not null})" );
 			var ctx = HitContext.FromTrace( tr, attacker );
 			var result = Resolve( attack, attacker, tr.GameObject, ctx );
 			results.Add( result );
@@ -140,40 +117,18 @@ public static class DamageResolver
 
 	private static bool RollCrit( Component attacker )
 	{
-		// Base 5% crit chance — RunModifiers will adjust this in Phase 5
 		return Random.Shared.NextSingle() < 0.05f;
 	}
 
-	private static void ApplyKnockback( GameObject target, Vector3 direction, float force )
-	{
-		// Enemies use manual position driving, not Rigidbody
-		var enemy = target.Components.Get<RogueliteEnemyBase>( FindMode.EverythingInSelfAndDescendants );
-		if ( enemy is not null )
-		{
-			enemy.ApplyKnockback( direction, force );
-			return;
-		}
-
-		// Fallback to Rigidbody for other objects (destructibles, etc)
-		var rb = target.Components.Get<Rigidbody>();
-		if ( rb.IsValid() )
-			rb.ApplyImpulse( direction.Normal * force );
-	}
-
-	/// <summary>
-	/// Walk up the parent chain to find the GameObject that has a HealthComponent.
-	/// Traces often hit child models/colliders, but damage components live on the root entity.
-	/// </summary>
 	private static GameObject FindEntityRoot( GameObject obj )
 	{
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<RogueliteHealthComponent>() is not null )
+			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}
-		// No health found in parents — return original (DamageResolver will bail with "no health")
 		return obj;
 	}
 }

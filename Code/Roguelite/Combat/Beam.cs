@@ -201,16 +201,14 @@ public class Beam : Component
 		GameObject best = null;
 		var bestDist = ChainRange;
 
-		foreach ( var health in Scene.GetAllComponents<RogueliteHealthComponent>() )
+		foreach ( var damageable in Scene.GetAllComponents<IDamageable>() )
 		{
-			if ( health.IsDead ) continue;
-			var obj = health.GameObject;
-			if ( exclude.Contains( obj ) ) continue;
+			if ( damageable.IsDead ) continue;
+			var obj = (damageable as Component)?.GameObject;
+			if ( obj is null || exclude.Contains( obj ) ) continue;
 
-			var faction = obj.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
-			if ( faction is null ) continue;
-			if ( faction.Faction == global::Faction.Player && !AffectsPlayers ) continue;
-			if ( faction.Faction == global::Faction.Enemy && !AffectsEnemies ) continue;
+			if ( damageable.Faction == global::Faction.Player && !AffectsPlayers ) continue;
+			if ( damageable.Faction == global::Faction.Enemy && !AffectsEnemies ) continue;
 
 			var dist = from.Distance( obj.WorldPosition );
 			if ( dist < bestDist )
@@ -268,10 +266,10 @@ public class Beam : Component
 
 	private bool CanDamage( GameObject target )
 	{
-		var faction = target.Components.Get<FactionComponent>( FindMode.EverythingInSelfAndDescendants );
-		if ( faction is null ) return false;
-		if ( faction.Faction == global::Faction.Player && !AffectsPlayers ) return false;
-		if ( faction.Faction == global::Faction.Enemy && !AffectsEnemies ) return false;
+		var damageable = target.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants );
+		if ( damageable is null ) return false;
+		if ( damageable.Faction == global::Faction.Player && !AffectsPlayers ) return false;
+		if ( damageable.Faction == global::Faction.Enemy && !AffectsEnemies ) return false;
 		return true;
 	}
 
@@ -280,7 +278,7 @@ public class Beam : Component
 		var current = obj;
 		while ( current is not null )
 		{
-			if ( current.Components.Get<RogueliteHealthComponent>() is not null )
+			if ( current.Components.Get<IDamageable>( FindMode.EverythingInSelfAndDescendants ) is not null )
 				return current;
 			current = current.Parent;
 		}

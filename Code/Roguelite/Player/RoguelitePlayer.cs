@@ -1,18 +1,23 @@
 /// <summary>
-/// Root player entity for the roguelite. Composes Health, Faction, Movement, Camera,
-/// and routes input to the active weapon. Attach to the player prefab root.
+/// Root player entity. Implements IDamageable with inlined health/faction.
 /// </summary>
 [Title( "Roguelite Player" )]
 [Icon( "person" )]
-public sealed class RoguelitePlayer : Component
+public sealed class RoguelitePlayer : Component, IDamageable
 {
-	[RequireComponent] public RogueliteHealthComponent Health { get; set; }
-	[RequireComponent] public FactionComponent Faction { get; set; }
 	[RequireComponent] public PlayerMovement Movement { get; set; }
 	[RequireComponent] public PlayerCamera Camera { get; set; }
 	[RequireComponent] public AbilityComponent Abilities { get; set; }
 
 	[Property] public PlayerClass Class { get; set; } = PlayerClass.Warrior;
+
+	// Inlined health
+	[Property] public float HealthMax { get; set; } = 200f;
+	[Sync] public float HealthCurrent { get; set; }
+	[Sync] public bool IsDead { get; set; }
+
+	// Inlined faction — always Player
+	public Faction Faction => global::Faction.Player;
 
 	[Sync] public bool IsAlive { get; set; } = true;
 
@@ -21,39 +26,32 @@ public sealed class RoguelitePlayer : Component
 	protected override void OnStart()
 	{
 		var stats = ClassStats.Get( Class );
-		Faction.Faction = global::Faction.Player;
 		Tags.Add( "player" );
 
-		// Walk through enemies — CharacterController ignores "enemy" tagged colliders
 		var cc = Components.Get<CharacterController>();
 		if ( cc.IsValid() )
 			cc.IgnoreLayers.Add( "enemy" );
 
-		// Only host initializes health — clients get it via [Sync]
 		if ( !IsProxy )
 		{
-			Health.Init( stats.MaxHp );
+			HealthMax = stats.MaxHp;
+			HealthCurrent = stats.MaxHp;
+			IsDead = false;
 			Movement.InitFromClass( stats );
 		}
 
-		// Find weapon on this GameObject or children
 		ActiveWeapon = Components.Get<WeaponBase>( FindMode.EverythingInSelfAndDescendants );
 		if ( ActiveWeapon is not null )
 			ActiveWeapon.OnEquip( this );
 
-		Log.Info( $"[RoguelitePlayer] Started as {Class}. HP: {Health.Current}/{Health.MaxHealth}. Weapon: {ActiveWeapon?.GetType().Name ?? "NONE"}" );
+		Log.Info( $"[RoguelitePlayer] Started as {Class}. HP: {HealthCurrent}/{HealthMax}. Weapon: {ActiveWeapon?.GetType().Name ?? "NONE"}" );
 
-		// Subscribe to death
-		Health.OnDeath += HandleDeath;
-		Health.OnRevive += HandleRevive;
-
-		// Create HUD for local player
 		if ( !IsProxy )
 		{
 			var hudObj = Scene.CreateObject();
 			hudObj.Name = "RogueliteHUD";
 			hudObj.SetParent( GameObject );
-			var screenPanel = hudObj.Components.Create<ScreenPanel>();
+			hudObj.Components.Create<ScreenPanel>();
 			hudObj.Components.Create<RogueliteHUD>();
 		}
 	}
@@ -65,6 +63,42 @@ public sealed class RoguelitePlayer : Component
 
 		HandleWeaponInput();
 		HandleAbilityInput();
+	}
+
+	public void ApplyDamage( float amount, DamageType type, Component attacker )
+	{
+		if ( IsDead ) return;
+
+		HealthCurrent = MathF.Max( 0, HealthCurrent - amount );
+
+		if ( HealthCurrent <= 0 )
+		{
+			IsDead = true;
+			IsAlive = false;
+			ActiveWeapon?.OnOwnerDied();
+		}
+	}
+
+	public void ApplyKnockback( Vector3 direction, float force )
+	{
+		// Player knockback via CharacterController
+		var cc = Components.Get<CharacterController>();
+		if ( cc.IsValid() )
+			cc.Punch( direction.WithZ( 0 ).Normal * force );
+	}
+
+	public void Heal( float amount )
+	{
+		if ( IsDead ) return;
+		HealthCurrent = MathF.Min( HealthMax, HealthCurrent + amount );
+	}
+
+	public void Revive( float hpPercent = 0.3f )
+	{
+		if ( !IsDead ) return;
+		IsDead = false;
+		IsAlive = true;
+		HealthCurrent = HealthMax * hpPercent;
 	}
 
 	private void HandleAbilityInput()
@@ -99,20 +133,6 @@ public sealed class RoguelitePlayer : Component
 			ActiveWeapon.SecondaryAttack();
 	}
 
-	private void HandleDeath()
-	{
-		IsAlive = false;
-		ActiveWeapon?.OnOwnerDied();
-	}
-
-	private void HandleRevive()
-	{
-		IsAlive = true;
-	}
-
-	/// <summary>
-	/// Equip a weapon, replacing the current one.
-	/// </summary>
 	public void EquipWeapon( WeaponBase weapon )
 	{
 		ActiveWeapon?.OnUnequip( this );

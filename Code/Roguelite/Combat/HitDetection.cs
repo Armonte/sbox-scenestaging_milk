@@ -39,10 +39,10 @@ public static class HitDetection
 		}
 
 		// Also check all components in range directly
-		foreach ( var health in scene.GetAllComponents<RogueliteHealthComponent>() )
+		foreach ( var health in scene.GetAllComponents<IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
-			var obj = health.GameObject;
+			var obj = (health as Component)?.GameObject;
 			if ( obj == ignore ) continue;
 			if ( obj.WorldPosition.Distance( center ) <= radius && seen.Add( obj ) )
 				results.Add( obj );
@@ -79,10 +79,10 @@ public static class HitDetection
 		var results = new List<GameObject>();
 		var cosHalfAngle = MathF.Cos( halfAngleDegrees * MathF.PI / 180f );
 
-		foreach ( var health in scene.GetAllComponents<RogueliteHealthComponent>() )
+		foreach ( var health in scene.GetAllComponents<IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
-			var obj = health.GameObject;
+			var obj = (health as Component)?.GameObject;
 			if ( obj == ignore ) continue;
 
 			var toTarget = obj.WorldPosition - origin;
@@ -104,10 +104,10 @@ public static class HitDetection
 	{
 		var results = new List<GameObject>();
 
-		foreach ( var health in scene.GetAllComponents<RogueliteHealthComponent>() )
+		foreach ( var health in scene.GetAllComponents<IDamageable>() )
 		{
 			if ( health.IsDead ) continue;
-			var obj = health.GameObject;
+			var obj = (health as Component)?.GameObject;
 			if ( obj == ignore ) continue;
 
 			if ( bounds.Contains( obj.WorldPosition ) )
