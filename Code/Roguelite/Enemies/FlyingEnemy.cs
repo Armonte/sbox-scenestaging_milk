@@ -6,7 +6,10 @@
 [Icon( "flight" )]
 public class FlyingEnemy : RogueliteEnemyBase
 {
-	[Property] public float HoverHeight { get; set; } = 200f;
+	/// <summary>
+	/// Default height above the player the flyer tries to maintain.
+	/// </summary>
+	[Property] public float HoverAbovePlayer { get; set; } = 200f;
 	[Property] public float FlySpeed { get; set; } = 200f;
 	[Property] public float ProjectileDamage { get; set; } = 15f;
 	[Property] public float ProjectileSpeed { get; set; } = 1500f;
@@ -71,7 +74,7 @@ public class FlyingEnemy : RogueliteEnemyBase
 	{
 		if ( CurrentTarget is null ) return;
 
-		var targetPos = CurrentTarget.WorldPosition + Vector3.Up * HoverHeight;
+		var targetPos = CurrentTarget.WorldPosition + Vector3.Up * HoverAbovePlayer;
 		var dir = (targetPos - WorldPosition);
 
 		if ( dir.Length > 10f )
@@ -92,7 +95,7 @@ public class FlyingEnemy : RogueliteEnemyBase
 	protected override void PerformAttack( RoguelitePlayer target )
 	{
 		// Maintain hover position while attacking
-		var hoverTarget = target.WorldPosition + Vector3.Up * HoverHeight;
+		var hoverTarget = target.WorldPosition + Vector3.Up * HoverAbovePlayer;
 		var hoverDir = (hoverTarget - WorldPosition);
 		if ( hoverDir.Length > 30f )
 			WorldPosition += hoverDir.Normal * FlySpeed * 0.5f * Time.Delta;
@@ -120,6 +123,8 @@ public class FlyingEnemy : RogueliteEnemyBase
 			attack, this, ProjectileSpeed, 0f );
 	}
 
+	private Rigidbody _swoopRb;
+
 	private void StartSwoop( RoguelitePlayer target )
 	{
 		_isSwooping = true;
@@ -133,7 +138,14 @@ public class FlyingEnemy : RogueliteEnemyBase
 
 		// Pull back slightly before diving (wind-up)
 		_swoopStartPos += Vector3.Up * 30f + (-_swoopDirection) * 40f;
-		WorldPosition = WorldPosition; // stay put, the arc will handle it
+
+		// Enable rigidbody for physical collision during the dive
+		_swoopRb = Components.Get<Rigidbody>( FindMode.EverythingInSelfAndDescendants );
+		if ( _swoopRb.IsValid() )
+		{
+			_swoopRb.Enabled = true;
+			_swoopRb.Gravity = false;
+		}
 
 		_cooldowns.Start( "swoop", SwoopCooldown );
 	}
@@ -145,6 +157,16 @@ public class FlyingEnemy : RogueliteEnemyBase
 		if ( _swoopProgress >= 1f )
 		{
 			_isSwooping = false;
+
+			// Disable rigidbody after swoop completes
+			if ( _swoopRb.IsValid() )
+			{
+				_swoopRb.Velocity = Vector3.Zero;
+				_swoopRb.Gravity = false;
+				_swoopRb.Enabled = false;
+				_swoopRb = null;
+			}
+
 			return;
 		}
 

@@ -57,7 +57,6 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 		foreach ( var col in Components.GetAll<Collider>( FindMode.EverythingInSelfAndDescendants ) )
 		{
-			col.IsTrigger = true;
 			col.Tags.Add( "enemy" );
 		}
 
