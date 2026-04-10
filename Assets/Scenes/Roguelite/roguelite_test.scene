@@ -243,41 +243,6 @@
           "PaniniVerticalCompensation": 0.5,
           "ProjectionMode": "Panini",
           "Strength": 1
-        },
-        {
-          "__type": "PSXPostProcess",
-          "__guid": "3bb85a09-51be-46f8-80a7-2b51477f22ea",
-          "__enabled": true,
-          "Flags": 0,
-          "ColorDepth": 5,
-          "DitherEnabled": true,
-          "DitherSpread": 1,
-          "JitterAmount": 1000,
-          "JitterEnabled": true,
-          "OnComponentDestroy": null,
-          "OnComponentDisabled": null,
-          "OnComponentEnabled": null,
-          "OnComponentFixedUpdate": null,
-          "OnComponentStart": null,
-          "OnComponentUpdate": null,
-          "ResolutionX": 320,
-          "ResolutionY": 240,
-          "ScanlineStrength": 0,
-          "ScanlineWidth": 0.4,
-          "Strength": 1
-        },
-        {
-          "__type": "PSXVertexSnap",
-          "__guid": "0b6a7c3c-6d48-4275-8c3a-48ab29be0be2",
-          "__enabled": false,
-          "Flags": 0,
-          "OnComponentDestroy": null,
-          "OnComponentDisabled": null,
-          "OnComponentEnabled": null,
-          "OnComponentFixedUpdate": null,
-          "OnComponentStart": null,
-          "OnComponentUpdate": null,
-          "SnapResolution": 90
         }
       ],
       "Children": []
@@ -3318,8 +3283,8 @@
         "3f528e94-32ca-4dab-8d31-183b106deb80": "a6bb7975-1957-4659-a193-7fe59c688a4c",
         "89c09c92-37d4-4214-82a2-a7c92902e4be": "367d47c5-c1b9-42f3-930f-83024a0bb123",
         "724381dc-555d-4421-a139-467c291c3fef": "a45f0069-8cca-4107-ad43-41693f576dde",
-        "414dee04-5ee0-4601-8160-9df488b94ca8": "dc423ab6-2e72-4ece-92c1-cdb1e7317420",
-        "e9ec5262-3a98-45ae-84ea-102684459dd3": "69056aa5-2e97-464b-91b5-29bd55d275be",
+        "ad444298-83ae-41bf-a681-fe8d2044d0b8": "2e953684-6d6f-4ce0-8a10-ab07c416fd55",
+        "2369a6d4-360e-4927-b880-3fd02e7910d1": "5f8ac39e-60a5-48be-b639-705198e8c49e",
         "c3f551cf-1ffe-4798-b9eb-c3b1a548039d": "5d8cffd9-d5c1-4b17-8be6-e307a7ba017c",
         "cfba37a4-2572-418d-9ced-fb95e238ee24": "d303309c-d64c-438d-af95-07368ae2b112",
         "312a625a-e623-44d8-ba41-f21534cf91da": "33832e4e-bd5d-4b70-9332-387b094caaf4",
@@ -10401,7 +10366,7 @@
       "Rotation": "0,0,0,1",
       "Scale": "1,1,1",
       "Tags": "skybox",
-      "Enabled": false,
+      "Enabled": true,
       "NetworkMode": 2,
       "NetworkFlags": 0,
       "NetworkOrphaned": 0,
@@ -15755,13 +15720,13 @@
       }
     },
     "GameObjectSystems": {
-      "Sandbox.Clutter.ClutterGridSystem": {
-        "Storage": {
-          "$blob": "b938e296-866b-4bbc-9896-6ba5131acfa3"
-        }
-      },
       "Sandbox.MovieMaker.MovieRecorderSystem": {
         "DisableClientRecording": false
+      },
+      "Sandbox.Clutter.ClutterGridSystem": {
+        "Storage": {
+          "$blob": "10d18f76-5c15-479c-9bff-0d12656413e0"
+        }
       }
     }
   },
