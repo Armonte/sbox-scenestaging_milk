@@ -1,0 +1,71 @@
+DamageNumberPanel
+{
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	justify-content: center;
+	align-items: center;
+	pointer-events: none;
+	white-space: nowrap;
+
+	.number
+	{
+		font-size: 64px;
+		font-family: Poppins;
+		font-weight: bold;
+		color: #ffffff;
+		text-shadow:
+			0 0 4px #000,
+			2px 2px 0 #000,
+			-2px -2px 0 #000,
+			2px -2px 0 #000,
+			-2px 2px 0 #000;
+	}
+
+	&.crit
+	{
+		.number
+		{
+			font-size: 96px;
+			color: #ffe066;
+			text-shadow:
+				0 0 8px #ff8800,
+				3px 3px 0 #441100,
+				-3px -3px 0 #441100,
+				3px -3px 0 #441100,
+				-3px 3px 0 #441100;
+		}
+	}
+
+	&.headshot
+	{
+		.number
+		{
+			font-size: 88px;
+			color: #ff8c1a;
+			text-shadow:
+				0 0 10px #ff4400,
+				3px 3px 0 #2a0a00,
+				-3px -3px 0 #2a0a00,
+				3px -3px 0 #2a0a00,
+				-3px 3px 0 #2a0a00;
+		}
+	}
+
+	&.weakpoint
+	{
+		.number
+		{
+			font-size: 104px;
+			color: #ff3333;
+			text-shadow:
+				0 0 12px #ff0000,
+				4px 4px 0 #2a0000,
+				-4px -4px 0 #2a0000,
+				4px -4px 0 #2a0000,
+				-4px 4px 0 #2a0000;
+		}
+	}
+}

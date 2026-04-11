@@ -12,8 +12,8 @@ public sealed class BowWeapon : WeaponBase
 	[Property] public float SweetspotStart { get; set; } = 0.85f;
 	[Property] public float SweetspotEnd { get; set; } = 0.95f;
 	[Property] public float SweetspotBonus { get; set; } = 1.5f;
-	[Property] public float ArrowSpeed { get; set; } = 3000f;
-	[Property] public float ArrowGravity { get; set; } = 0f;
+	[Property] public float ArrowSpeed { get; set; } = 6000f;
+	[Property] public float ArrowGravity { get; set; } = 200f;
 	[Property] public float FireCooldown { get; set; } = 0.3f;
 
 	/// <summary>
@@ -24,10 +24,56 @@ public sealed class BowWeapon : WeaponBase
 
 	/// <summary>
 	/// Where the arrow visually spawns, in eye-local space (X = right, Y = up, Z = forward).
-	/// Doesn't affect where the arrow lands — it always flies straight to the crosshair hit.
-	/// This just moves the visible launch point so the arrow looks like it comes from the bow hand.
+	/// Used as a fallback when no BowViewmodel / NockPoint is found. Doesn't affect where
+	/// the arrow lands — it always flies straight to the crosshair hit.
 	/// </summary>
 	[Property, Group( "Aim" )] public Vector3 SpawnOffset { get; set; } = new Vector3( 20f, -8f, 10f );
+
+	// Scene-lookup reference — found via Scene.GetAllComponents<BowViewmodel>()
+	// in OnEquip. BowWeapon is Components.Create<>()'d at runtime by the pedestal,
+	// so [Property] GameObject slots would always be null. The viewmodel lives in
+	// the scene and owns its own NockPoint / NockedArrowVisual refs (those slots
+	// WORK in the editor because both sides are in the same scene).
+	private BowViewmodel _viewmodel;
+
+	/// <summary>
+	/// Path to the arrow model (project-relative, i.e. under Assets/).
+	/// </summary>
+	[Property, Group( "Visuals" )] public string ArrowModelPath { get; set; } = "sm_prop_weapon_arrow_dungeon.vmdl";
+
+	[Property, Group( "Visuals" )] public bool ArrowTrail { get; set; } = true;
+	[Property, Group( "Visuals" )] public Color ArrowTrailColor { get; set; } = new Color( 1f, 0.92f, 0.75f );
+
+	/// <summary>
+	/// Visual rotation offset for the arrow mesh. Defaults to yaw 180° because the
+	/// dungeon arrow FBX is modeled pointing back along the path of travel — tweak
+	/// in the inspector if a different arrow model points along a different axis.
+	/// </summary>
+	[Property, Group( "Visuals" )] public Angles ArrowAngleOffset { get; set; } = new Angles( 0f, 180f, 0f );
+
+	[Property, Group( "Visuals" )] public float ArrowScale { get; set; } = 1.3f;
+
+	/// <summary>
+	/// Arrows lodge into whatever they hit and linger for a few seconds.
+	/// </summary>
+	[Property, Group( "Stick" )] public bool ArrowSticks { get; set; } = true;
+
+	/// <summary>
+	/// Seconds a stuck arrow stays in the world before despawning.
+	/// </summary>
+	[Property, Group( "Stick" )] public float ArrowStickLifetime { get; set; } = 5f;
+
+	/// <summary>
+	/// Use hitbox traces so weak-point tags (e.g. "head", "weakpoint") apply
+	/// damage multipliers when the arrow hits them.
+	/// </summary>
+	[Property, Group( "Combat" )] public bool EnableWeakpointHits { get; set; } = true;
+
+	/// <summary>
+	/// Log every arrow hit to the console (what was hit, whether a hitbox was
+	/// involved, which weak-point tags matched). Turn on when tuning hurtboxes.
+	/// </summary>
+	[Property, Group( "Combat" )] public bool DebugHits { get; set; } = false;
 
 	public float DrawProgress => _isDrawing ? Math.Clamp( _drawTimer / DrawTime, 0f, 1f ) : 0f;
 	public bool IsDrawing => _isDrawing;
@@ -40,6 +86,36 @@ public sealed class BowWeapon : WeaponBase
 	{
 		BaseDamage = 25f;
 		Category = WeaponCategory.Bow;
+	}
+
+	public override void OnEquip( RoguelitePlayer owner )
+	{
+		base.OnEquip( owner );
+
+		var all = Scene.GetAllComponents<BowViewmodel>().ToList();
+		_viewmodel = all.FirstOrDefault();
+
+		if ( _viewmodel is null )
+		{
+			Log.Warning( "[BowWeapon] OnEquip — no BowViewmodel component found in the scene. " +
+				"Add a BowViewmodel component to your bow_viewmodel GameObject (it must be on an " +
+				"enabled GameObject so Scene.GetAllComponents can see it)." );
+			return;
+		}
+
+		Log.Info( $"[BowWeapon] OnEquip — found {all.Count} BowViewmodel(s), using {_viewmodel.GameObject.Name}" );
+		_viewmodel.SetVisible( true );
+		_viewmodel.SetNockedArrowVisible( true );
+	}
+
+	public override void OnUnequip( RoguelitePlayer owner )
+	{
+		base.OnUnequip( owner );
+		if ( _viewmodel is not null )
+		{
+			_viewmodel.SetVisible( false );
+			_viewmodel = null;
+		}
 	}
 
 	public override void PrimaryAttack()
@@ -59,6 +135,12 @@ public sealed class BowWeapon : WeaponBase
 	protected override void OnWeaponTick()
 	{
 		if ( Owner is null || Owner.IsProxy ) return;
+
+		// Push current draw progress into the viewmodel every frame so it can
+		// drive the bone bend, string pull-back, and nocked-arrow slide. Zero
+		// when not drawing, so the bow snaps back to rest pose on release/fire.
+		if ( _viewmodel is not null )
+			_viewmodel.SetDrawProgress( DrawProgress );
 
 		// Start drawing on press
 		if ( Input.Down( "attack1" ) && !_isDrawing && IsCooldownReady( "fire" ) )
@@ -112,11 +194,23 @@ public sealed class BowWeapon : WeaponBase
 		var aimTrace = HitDetection.Ray( Scene, eyePos, aimEnd, 1f, Owner.GameObject );
 		var aimPoint = aimTrace.Hit ? aimTrace.HitPosition : aimEnd;
 
-		// 2. Spawn the arrow at the bow-hand offset (eye-local, rotates with the camera).
-		var spawnPos = eyePos
-			+ lookRot.Right * SpawnOffset.x
-			+ lookRot.Up * SpawnOffset.y
-			+ lookRot.Forward * SpawnOffset.z;
+		// 2. Spawn the arrow from the viewmodel's nock if one exists — its world
+		//    position tracks the camera-parented bow mesh automatically. Otherwise
+		//    fall back to the eye-local SpawnOffset so the bow still works without
+		//    a viewmodel wired up (e.g. in tests or third-person scenarios).
+		Vector3 spawnPos;
+		var nock = _viewmodel?.NockPoint;
+		if ( nock.IsValid() )
+		{
+			spawnPos = nock.WorldPosition;
+		}
+		else
+		{
+			spawnPos = eyePos
+				+ lookRot.Right * SpawnOffset.x
+				+ lookRot.Up * SpawnOffset.y
+				+ lookRot.Forward * SpawnOffset.z;
+		}
 
 		// 3. Direction from the offset spawn point toward the crosshair hit.
 		//    Arrow launches angled toward crosshair, visually comes from the bow hand,
@@ -132,15 +226,31 @@ public sealed class BowWeapon : WeaponBase
 
 		var attack = BuildAttack( damageMultiplier, DamageType.Pierce, canKnockback: true, knockbackForce: kbForce );
 
-		ProjectileBase.Spawn(
+		var proj = ProjectileBase.Spawn(
 			Scene,
 			spawnPos,
 			shootRot,
 			attack,
 			Owner,
 			speed: arrowSpeed,
-			gravity: ArrowGravity
+			gravity: ArrowGravity,
+			modelPath: ArrowModelPath,
+			useTrail: ArrowTrail,
+			trailColor: ArrowTrailColor,
+			modelAngleOffset: ArrowAngleOffset,
+			modelScale: ArrowScale,
+			stickOnHit: ArrowSticks,
+			useHitboxes: EnableWeakpointHits,
+			debugHits: DebugHits
 		);
+		proj.StickLifetime = ArrowStickLifetime;
+
+		// Hand off to the viewmodel's scale-in tween: the real world-space arrow
+		// takes over flight, and the nocked-arrow visual pops back in over the
+		// fire cooldown. All the timing lives on BowViewmodel now — we just kick
+		// it off here with the cooldown duration.
+		if ( _viewmodel is not null )
+			_viewmodel.StartNockedArrowFade( FireCooldown );
 
 		BroadcastFire();
 	}

@@ -1,0 +1,66 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root class="@StyleClass">
+	<div class="number">@AmountText</div>
+</root>
+
+@code {
+
+	[Property] public float Amount { get; set; }
+	[Property] public DamageNumberStyle Style { get; set; } = DamageNumberStyle.Normal;
+	[Property] public float Lifetime { get; set; } = 0.9f;
+	[Property] public float RiseAmount { get; set; } = 90f;
+	[Property] public float FadeStart { get; set; } = 0.5f;
+
+	string StyleClass => Style switch
+	{
+		DamageNumberStyle.Crit => "crit",
+		DamageNumberStyle.Headshot => "headshot",
+		DamageNumberStyle.Weakpoint => "weakpoint",
+		_ => ""
+	};
+
+	private TimeSince _spawnTime;
+	private Vector3 _startPos;
+	private bool _initialized;
+
+	protected override void OnUpdate()
+	{
+		if ( !_initialized )
+		{
+			_spawnTime = 0;
+			_startPos = WorldPosition;
+			_initialized = true;
+		}
+
+		var t = MathF.Max( 0f, (float)_spawnTime );
+		if ( t >= Lifetime )
+		{
+			GameObject.Destroy();
+			return;
+		}
+
+		var progress = t / Lifetime;
+
+		// Rise upward in world space — ease-out so it pops fast then slows.
+		var ease = 1f - (1f - progress) * (1f - progress);
+		WorldPosition = _startPos + Vector3.Up * RiseAmount * ease;
+
+		// Hold full opacity until FadeStart, then fade to 0 over the rest of the lifetime.
+		var fadeRange = MathF.Max( 0.0001f, 1f - FadeStart );
+		var fadeT = MathF.Max( 0f, (progress - FadeStart) / fadeRange );
+		var alpha = 1f - fadeT;
+
+		if ( Panel is not null )
+			Panel.Style.Opacity = alpha;
+	}
+
+	string AmountText => MathF.Round( Amount ).ToString();
+
+	// AmountText and Style don't change during the panel's lifetime, so the
+	// rebuild hash is stable. The animation is driven by direct Style writes.
+	protected override int BuildHash() => System.HashCode.Combine( AmountText, Style );
+}

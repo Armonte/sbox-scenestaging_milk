@@ -135,8 +135,8 @@
       "__version": 2,
       "Flags": 0,
       "Name": "Camera",
-      "Position": "-8,-224,128",
-      "Rotation": "-0.01954702,0.0183165,0.7294402,0.6835198",
+      "Position": "-8,-224,422.6713",
+      "Rotation": "-0.01954713,0.01831661,0.7294402,0.6835198",
       "Scale": "1,1,1",
       "Tags": "",
       "Enabled": true,
@@ -245,7 +245,450 @@
           "Strength": 1
         }
       ],
-      "Children": []
+      "Children": [
+        {
+          "__guid": "ab8f7e4d-f7dc-4d74-9518-8194f6712f76",
+          "__version": 2,
+          "Flags": 0,
+          "Name": "Viewmodels",
+          "Position": "37.94455,-16.41331,-3.345184",
+          "Rotation": "0.07970119,-0.09081202,0.7064839,0.6973386",
+          "Scale": "0.8934126,0.8934126,0.8934126",
+          "Tags": "",
+          "Enabled": true,
+          "NetworkMode": 2,
+          "NetworkFlags": 0,
+          "NetworkOrphaned": 0,
+          "NetworkTransmit": true,
+          "OwnerTransfer": 1,
+          "Components": [],
+          "Children": [
+            {
+              "__guid": "c1546d18-3852-465d-93e7-1c8e169f7d06",
+              "__version": 2,
+              "Flags": 0,
+              "Name": "bow_viewmodel",
+              "Position": "0,0,0",
+              "Rotation": "0,0,0,1",
+              "Scale": "1,1,1",
+              "Tags": "",
+              "Enabled": true,
+              "NetworkMode": 2,
+              "NetworkFlags": 0,
+              "NetworkOrphaned": 0,
+              "NetworkTransmit": true,
+              "OwnerTransfer": 1,
+              "Components": [
+                {
+                  "__type": "BowViewmodel",
+                  "__guid": "b958e04d-25f9-4eeb-a289-6461a5e96009",
+                  "__enabled": true,
+                  "Flags": 0,
+                  "DrawBones": [
+                    {
+                      "BoneName": "Bow_L_1",
+                      "DrawRotation": "0,9,0"
+                    },
+                    {
+                      "BoneName": "Bow_R_1",
+                      "DrawRotation": "0,0,0"
+                    },
+                    {
+                      "BoneName": "Bow_L_2",
+                      "DrawRotation": "0,0,0"
+                    },
+                    {
+                      "BoneName": "Bow_R_2",
+                      "DrawRotation": "0,0,0"
+                    },
+                    {
+                      "BoneName": "string_L_1",
+                      "DrawRotation": "0,0,0"
+                    },
+                    {
+                      "BoneName": "string_R_1",
+                      "DrawRotation": "0,0,0"
+                    }
+                  ],
+                  "DrawBowTilt": "0,0,0",
+                  "DrawPullOffset": "-12,0,0",
+                  "NockedArrowVisual": {
+                    "_type": "gameobject",
+                    "go": "356f11b5-5177-40b4-8b90-4010e2f093de"
+                  },
+                  "NockFadeDuration": 0.3,
+                  "NockPoint": {
+                    "_type": "gameobject",
+                    "go": "8d45e9ec-a724-44ca-9a8f-6ff0a5d8b784"
+                  },
+                  "OnComponentDestroy": null,
+                  "OnComponentDisabled": null,
+                  "OnComponentEnabled": null,
+                  "OnComponentFixedUpdate": null,
+                  "OnComponentStart": null,
+                  "OnComponentUpdate": null
+                },
+                {
+                  "__type": "Sandbox.SkinnedModelRenderer",
+                  "__guid": "7854073e-0757-4367-8587-bb872f19e627",
+                  "__enabled": true,
+                  "Flags": 0,
+                  "AnimationGraph": null,
+                  "BodyGroups": 18446744073709551615,
+                  "BoneMergeTarget": null,
+                  "CreateAttachments": false,
+                  "CreateBoneObjects": true,
+                  "LodOverride": null,
+                  "MaterialGroup": null,
+                  "MaterialOverride": null,
+                  "Materials": null,
+                  "Model": "models/dawn-flower/bones/traveler_bow.vmdl",
+                  "Morphs": {},
+                  "OnComponentDestroy": null,
+                  "OnComponentDisabled": null,
+                  "OnComponentEnabled": null,
+                  "OnComponentFixedUpdate": null,
+                  "OnComponentStart": null,
+                  "OnComponentUpdate": null,
+                  "Parameters": {
+                    "bools": {},
+                    "ints": {},
+                    "floats": {},
+                    "vectors": {},
+                    "rotations": {}
+                  },
+                  "PlaybackRate": 1,
+                  "RenderOptions": {
+                    "GameLayer": false,
+                    "OverlayLayer": true,
+                    "BloomLayer": false,
+                    "AfterUILayer": false
+                  },
+                  "RenderType": "On",
+                  "Sequence": {
+                    "Name": null,
+                    "Looping": true,
+                    "Blending": false
+                  },
+                  "Tint": "1,1,1,1",
+                  "UseAnimGraph": true
+                }
+              ],
+              "Children": [
+                {
+                  "__guid": "356f11b5-5177-40b4-8b90-4010e2f093de",
+                  "__version": 2,
+                  "Flags": 0,
+                  "Name": "NockedArrow",
+                  "Position": "2.219022,-1.648567,0.3136038",
+                  "Rotation": "0.1120947,0.1409254,0.7205983,0.6695616",
+                  "Scale": "0.6075575,0.6075575,0.6075575",
+                  "Tags": "",
+                  "Enabled": true,
+                  "NetworkMode": 2,
+                  "NetworkFlags": 0,
+                  "NetworkOrphaned": 0,
+                  "NetworkTransmit": true,
+                  "OwnerTransfer": 1,
+                  "Components": [
+                    {
+                      "__type": "Sandbox.ModelRenderer",
+                      "__guid": "0026bf38-c5f2-40eb-852c-276f2f756122",
+                      "__enabled": true,
+                      "Flags": 0,
+                      "BodyGroups": 18446744073709551615,
+                      "CreateAttachments": false,
+                      "LodOverride": null,
+                      "MaterialGroup": null,
+                      "MaterialOverride": null,
+                      "Materials": null,
+                      "Model": "sm_prop_weapon_arrow_dungeon.vmdl",
+                      "OnComponentDestroy": null,
+                      "OnComponentDisabled": null,
+                      "OnComponentEnabled": null,
+                      "OnComponentFixedUpdate": null,
+                      "OnComponentStart": null,
+                      "OnComponentUpdate": null,
+                      "RenderOptions": {
+                        "GameLayer": false,
+                        "OverlayLayer": true,
+                        "BloomLayer": false,
+                        "AfterUILayer": false
+                      },
+                      "RenderType": "On",
+                      "Tint": "1,1,1,1"
+                    }
+                  ],
+                  "Children": []
+                },
+                {
+                  "__guid": "8d45e9ec-a724-44ca-9a8f-6ff0a5d8b784",
+                  "__version": 2,
+                  "Flags": 0,
+                  "Name": "NockPoint",
+                  "Position": "0.8720762,-1.543161,0.6424609",
+                  "Rotation": "0.1090981,0.1429332,0.6811798,0.7096913",
+                  "Scale": "0.6075575,0.6075575,0.6075575",
+                  "Tags": "",
+                  "Enabled": true,
+                  "NetworkMode": 2,
+                  "NetworkFlags": 0,
+                  "NetworkOrphaned": 0,
+                  "NetworkTransmit": true,
+                  "OwnerTransfer": 1,
+                  "Components": [],
+                  "Children": []
+                },
+                {
+                  "__guid": "39178e25-7072-4752-a4af-ac9fe117ad54",
+                  "__version": 2,
+                  "Flags": 4,
+                  "Name": "Armature",
+                  "Position": "0,0,0",
+                  "Rotation": "0,0,0,1",
+                  "Scale": "1,1,1",
+                  "Tags": "",
+                  "Enabled": true,
+                  "NetworkMode": 2,
+                  "NetworkFlags": 0,
+                  "NetworkOrphaned": 0,
+                  "NetworkTransmit": true,
+                  "OwnerTransfer": 1,
+                  "Components": [],
+                  "Children": [
+                    {
+                      "__guid": "111c012b-1f15-4034-9b69-98e094f5115d",
+                      "__version": 2,
+                      "Flags": 4,
+                      "Name": "Root",
+                      "Position": "0,0,0",
+                      "Rotation": "0,0,0,1",
+                      "Scale": "1,1,1",
+                      "Tags": "",
+                      "Enabled": true,
+                      "NetworkMode": 2,
+                      "NetworkFlags": 0,
+                      "NetworkOrphaned": 0,
+                      "NetworkTransmit": true,
+                      "OwnerTransfer": 1,
+                      "Components": [],
+                      "Children": [
+                        {
+                          "__guid": "c322a44c-4aed-4006-b03c-48bcce47aceb",
+                          "__version": 2,
+                          "Flags": 4,
+                          "Name": "Bow_Root",
+                          "Position": "0,0,0",
+                          "Rotation": "0,0,0,1",
+                          "Scale": "1,1,1",
+                          "Tags": "",
+                          "Enabled": true,
+                          "NetworkMode": 2,
+                          "NetworkFlags": 0,
+                          "NetworkOrphaned": 0,
+                          "NetworkTransmit": true,
+                          "OwnerTransfer": 1,
+                          "Components": [],
+                          "Children": [
+                            {
+                              "__guid": "74b12529-73ec-4509-8c71-8fe882f418e6",
+                              "__version": 2,
+                              "Flags": 4,
+                              "Name": "Bow_L_1",
+                              "Position": "0,0,0",
+                              "Rotation": "0,0,0,1",
+                              "Scale": "1,1,1",
+                              "Tags": "",
+                              "Enabled": true,
+                              "NetworkMode": 2,
+                              "NetworkFlags": 0,
+                              "NetworkOrphaned": 0,
+                              "NetworkTransmit": true,
+                              "OwnerTransfer": 1,
+                              "Components": [],
+                              "Children": [
+                                {
+                                  "__guid": "2a24421e-2473-4e06-bd29-a74b9375797a",
+                                  "__version": 2,
+                                  "Flags": 4,
+                                  "Name": "Bow_L_2",
+                                  "Position": "0,0,0",
+                                  "Rotation": "0,0,0,1",
+                                  "Scale": "1,1,1",
+                                  "Tags": "",
+                                  "Enabled": true,
+                                  "NetworkMode": 2,
+                                  "NetworkFlags": 0,
+                                  "NetworkOrphaned": 0,
+                                  "NetworkTransmit": true,
+                                  "OwnerTransfer": 1,
+                                  "Components": [],
+                                  "Children": [
+                                    {
+                                      "__guid": "344705cd-8b47-4221-a8f5-8e831600537c",
+                                      "__version": 2,
+                                      "Flags": 4,
+                                      "Name": "String_L_1",
+                                      "Position": "0,0,0",
+                                      "Rotation": "0,0,0,1",
+                                      "Scale": "1,1,1",
+                                      "Tags": "",
+                                      "Enabled": true,
+                                      "NetworkMode": 2,
+                                      "NetworkFlags": 0,
+                                      "NetworkOrphaned": 0,
+                                      "NetworkTransmit": true,
+                                      "OwnerTransfer": 1,
+                                      "Components": [],
+                                      "Children": [
+                                        {
+                                          "__guid": "ffeef50b-098a-4f0d-9046-80efd0b96706",
+                                          "__version": 2,
+                                          "Flags": 4,
+                                          "Name": "String_L_2",
+                                          "Position": "0,0,0",
+                                          "Rotation": "0,0,0,1",
+                                          "Scale": "1,1,1",
+                                          "Tags": "",
+                                          "Enabled": true,
+                                          "NetworkMode": 2,
+                                          "NetworkFlags": 0,
+                                          "NetworkOrphaned": 0,
+                                          "NetworkTransmit": true,
+                                          "OwnerTransfer": 1,
+                                          "Components": [],
+                                          "Children": [
+                                            {
+                                              "__guid": "e293f458-2d52-4503-82ae-039e8031f317",
+                                              "__version": 2,
+                                              "Flags": 4,
+                                              "Name": "String_L_2_end",
+                                              "Position": "0,0,0",
+                                              "Rotation": "0,0,0,1",
+                                              "Scale": "1,1,1",
+                                              "Tags": "",
+                                              "Enabled": true,
+                                              "NetworkMode": 2,
+                                              "NetworkFlags": 0,
+                                              "NetworkOrphaned": 0,
+                                              "NetworkTransmit": true,
+                                              "OwnerTransfer": 1,
+                                              "Components": [],
+                                              "Children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "__guid": "1d1bc65c-9c60-4f80-bd3a-b2868b99f84d",
+                              "__version": 2,
+                              "Flags": 4,
+                              "Name": "Bow_R_1",
+                              "Position": "0,0,0",
+                              "Rotation": "0,0,0,1",
+                              "Scale": "1,1,1",
+                              "Tags": "",
+                              "Enabled": true,
+                              "NetworkMode": 2,
+                              "NetworkFlags": 0,
+                              "NetworkOrphaned": 0,
+                              "NetworkTransmit": true,
+                              "OwnerTransfer": 1,
+                              "Components": [],
+                              "Children": [
+                                {
+                                  "__guid": "187c85f3-7059-4f41-9925-dff59dc623ae",
+                                  "__version": 2,
+                                  "Flags": 4,
+                                  "Name": "Bow_R_2",
+                                  "Position": "0,0,0",
+                                  "Rotation": "0,0,0,1",
+                                  "Scale": "1,1,1",
+                                  "Tags": "",
+                                  "Enabled": true,
+                                  "NetworkMode": 2,
+                                  "NetworkFlags": 0,
+                                  "NetworkOrphaned": 0,
+                                  "NetworkTransmit": true,
+                                  "OwnerTransfer": 1,
+                                  "Components": [],
+                                  "Children": [
+                                    {
+                                      "__guid": "fb13fcf6-0eaf-4736-b9cb-ac51ff9b38a1",
+                                      "__version": 2,
+                                      "Flags": 4,
+                                      "Name": "String_R_1",
+                                      "Position": "0,0,0",
+                                      "Rotation": "0,0,0,1",
+                                      "Scale": "1,1,1",
+                                      "Tags": "",
+                                      "Enabled": true,
+                                      "NetworkMode": 2,
+                                      "NetworkFlags": 0,
+                                      "NetworkOrphaned": 0,
+                                      "NetworkTransmit": true,
+                                      "OwnerTransfer": 1,
+                                      "Components": [],
+                                      "Children": [
+                                        {
+                                          "__guid": "2fa187ae-7331-425e-bcfb-81115b223b36",
+                                          "__version": 2,
+                                          "Flags": 4,
+                                          "Name": "String_R_2",
+                                          "Position": "0,0,0",
+                                          "Rotation": "0,0,0,1",
+                                          "Scale": "1,1,1",
+                                          "Tags": "",
+                                          "Enabled": true,
+                                          "NetworkMode": 2,
+                                          "NetworkFlags": 0,
+                                          "NetworkOrphaned": 0,
+                                          "NetworkTransmit": true,
+                                          "OwnerTransfer": 1,
+                                          "Components": [],
+                                          "Children": [
+                                            {
+                                              "__guid": "405f6fe9-2eb6-4793-a80e-d6205f9d626b",
+                                              "__version": 2,
+                                              "Flags": 4,
+                                              "Name": "String_R_2_end",
+                                              "Position": "0,0,0",
+                                              "Rotation": "0,0,0,1",
+                                              "Scale": "1,1,1",
+                                              "Tags": "",
+                                              "Enabled": true,
+                                              "NetworkMode": 2,
+                                              "NetworkFlags": 0,
+                                              "NetworkOrphaned": 0,
+                                              "NetworkTransmit": true,
+                                              "OwnerTransfer": 1,
+                                              "Components": [],
+                                              "Children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "__guid": "9ccd9d26-9439-4995-b7e7-403dbd283280",
@@ -278,6 +721,14 @@
             },
             "Property": "__enabled",
             "Value": false
+          },
+          {
+            "Target": {
+              "Type": "Component",
+              "IdValue": "89c09c92-37d4-4214-82a2-a7c92902e4be"
+            },
+            "Property": "GroundAcceleration",
+            "Value": 2
           }
         ],
         "MovedObjects": []
@@ -7805,13 +8256,17 @@
               "__enabled": true,
               "Flags": 0,
               "InteractRange": 100,
+              "LabelOverride": null,
               "OnComponentDestroy": null,
               "OnComponentDisabled": null,
               "OnComponentEnabled": null,
               "OnComponentFixedUpdate": null,
               "OnComponentStart": null,
               "OnComponentUpdate": null,
-              "WeaponType": "Bow"
+              "WeaponPrefab": {
+                "_type": "gameobject",
+                "go": "b6304b6e-df3f-4602-90c6-f0f78ada2462"
+              }
             }
           ],
           "Children": [
@@ -7853,51 +8308,6 @@
                   "Tint": "1,1,1,1"
                 },
                 {
-                  "__type": "Sandbox.SkinnedModelRenderer",
-                  "__guid": "38bcb97f-4f85-4dcf-bc7d-5d175eff2843",
-                  "__enabled": true,
-                  "Flags": 0,
-                  "AnimationGraph": null,
-                  "BodyGroups": 18446744073709551615,
-                  "BoneMergeTarget": null,
-                  "CreateAttachments": false,
-                  "CreateBoneObjects": false,
-                  "LodOverride": null,
-                  "MaterialGroup": null,
-                  "MaterialOverride": null,
-                  "Materials": null,
-                  "Model": "models/dawn-flower/bones/traveler_bow.vmdl",
-                  "Morphs": {},
-                  "OnComponentDestroy": null,
-                  "OnComponentDisabled": null,
-                  "OnComponentEnabled": null,
-                  "OnComponentFixedUpdate": null,
-                  "OnComponentStart": null,
-                  "OnComponentUpdate": null,
-                  "Parameters": {
-                    "bools": {},
-                    "ints": {},
-                    "floats": {},
-                    "vectors": {},
-                    "rotations": {}
-                  },
-                  "PlaybackRate": 1,
-                  "RenderOptions": {
-                    "GameLayer": true,
-                    "OverlayLayer": false,
-                    "BloomLayer": false,
-                    "AfterUILayer": false
-                  },
-                  "RenderType": "On",
-                  "Sequence": {
-                    "Name": null,
-                    "Looping": true,
-                    "Blending": false
-                  },
-                  "Tint": "1,1,1,1",
-                  "UseAnimGraph": true
-                },
-                {
                   "__type": "Sandbox.ModelCollider",
                   "__guid": "7e698b7c-454a-4d98-9d46-98773618afcc",
                   "__enabled": true,
@@ -7921,6 +8331,33 @@
                   "Static": true,
                   "Surface": null,
                   "SurfaceVelocity": "0,0,0"
+                },
+                {
+                  "__type": "Sandbox.ModelRenderer",
+                  "__guid": "38bcb97f-4f85-4dcf-bc7d-5d175eff2843",
+                  "__enabled": true,
+                  "Flags": 0,
+                  "BodyGroups": 18446744073709551615,
+                  "CreateAttachments": false,
+                  "LodOverride": null,
+                  "MaterialGroup": null,
+                  "MaterialOverride": null,
+                  "Materials": null,
+                  "Model": "models/dawn-flower/bones/traveler_bow.vmdl",
+                  "OnComponentDestroy": null,
+                  "OnComponentDisabled": null,
+                  "OnComponentEnabled": null,
+                  "OnComponentFixedUpdate": null,
+                  "OnComponentStart": null,
+                  "OnComponentUpdate": null,
+                  "RenderOptions": {
+                    "GameLayer": true,
+                    "OverlayLayer": false,
+                    "BloomLayer": false,
+                    "AfterUILayer": false
+                  },
+                  "RenderType": "On",
+                  "Tint": "1,1,1,1"
                 }
               ],
               "Children": []
@@ -8140,13 +8577,17 @@
               "__enabled": true,
               "Flags": 0,
               "InteractRange": 100,
+              "LabelOverride": null,
               "OnComponentDestroy": null,
               "OnComponentDisabled": null,
               "OnComponentEnabled": null,
               "OnComponentFixedUpdate": null,
               "OnComponentStart": null,
               "OnComponentUpdate": null,
-              "WeaponType": "Sword"
+              "WeaponPrefab": {
+                "_type": "gameobject",
+                "go": "de5f76d3-3d62-4075-985c-a8ad5ebb30e1"
+              }
             }
           ],
           "Children": [
@@ -8322,11 +8763,17 @@
               "AttackCooldown": 1.5,
               "AttackDamage": 25,
               "AttackHitDelay": 0.35,
+              "AttackImpactSound": null,
               "AttackRange": 120,
               "AttackSpeed": 1,
+              "AttackWindupSound": null,
+              "DeathSound": null,
               "DetectionRange": 1200,
               "EnemyName": "protoGoblin",
               "HealthMax": 100,
+              "HitFlashDuration": 0.03,
+              "HitFlashIntensity": 4,
+              "HitSound": null,
               "IsPassive": false,
               "MoveSpeed": 150,
               "OnComponentDestroy": null,
@@ -8396,14 +8843,20 @@
               "AttackCooldown": 1.5,
               "AttackDamage": 25,
               "AttackHitDelay": 0.35,
+              "AttackImpactSound": null,
               "AttackRange": 120,
               "AttackSpeed": 1,
+              "AttackWindupSound": null,
               "BobAmplitude": 50,
               "BobFrequency": 1.5,
+              "DeathSound": null,
               "DetectionRange": 1200,
               "EnemyName": "Flyer",
               "FlySpeed": 120,
               "HealthMax": 0,
+              "HitFlashDuration": 0.03,
+              "HitFlashIntensity": 4,
+              "HitSound": null,
               "HoverAbovePlayer": 200,
               "IsPassive": true,
               "MoveSpeed": 150,
@@ -8597,14 +9050,20 @@
               "AttackCooldown": 1.5,
               "AttackDamage": 25,
               "AttackHitDelay": 0.35,
+              "AttackImpactSound": null,
               "AttackRange": 120,
               "AttackSpeed": 1,
+              "AttackWindupSound": null,
               "CastTime": 1.2,
+              "DeathSound": null,
               "DetectionRange": 1200,
               "EnemyName": "Flyer",
               "FallbackProjectileDamage": 10,
               "FleeDistance": 600,
               "HealthMax": 100,
+              "HitFlashDuration": 0.03,
+              "HitFlashIntensity": 4,
+              "HitSound": null,
               "IsPassive": false,
               "MaxMinions": 3,
               "MinionPrefab": {
@@ -8766,16 +9225,22 @@
               "AttackCooldown": 1.5,
               "AttackDamage": 25,
               "AttackHitDelay": 0.35,
+              "AttackImpactSound": null,
               "AttackRange": 120,
               "AttackSpeed": 1,
+              "AttackWindupSound": null,
               "ChargeCooldown": 5,
               "ChargeDamageMultiplier": 2,
               "ChargeImpactRadius": 60,
               "ChargeRange": 600,
               "ChargeSpeed": 500,
+              "DeathSound": null,
               "DetectionRange": 1200,
               "EnemyName": "Enemy",
               "HealthMax": 100,
+              "HitFlashDuration": 0.03,
+              "HitFlashIntensity": 4,
+              "HitSound": null,
               "IsPassive": false,
               "MoveSpeed": 150,
               "OnComponentDestroy": null,
@@ -8879,11 +9344,17 @@
               "AttackCooldown": 1.5,
               "AttackDamage": 25,
               "AttackHitDelay": 0.35,
+              "AttackImpactSound": null,
               "AttackRange": 120,
               "AttackSpeed": 1,
+              "AttackWindupSound": null,
+              "DeathSound": null,
               "DetectionRange": 1200,
               "EnemyName": "protoGoblin",
               "HealthMax": 100,
+              "HitFlashDuration": 0.03,
+              "HitFlashIntensity": 4,
+              "HitSound": null,
               "IsPassive": false,
               "MoveSpeed": 150,
               "OnComponentDestroy": null,
@@ -9054,12 +9525,18 @@
                   "AttackCooldown": 0.5,
                   "AttackDamage": 0.001,
                   "AttackHitDelay": 0.55,
+                  "AttackImpactSound": null,
                   "AttackRange": 140,
                   "AttackSpeed": 1,
+                  "AttackWindupSound": null,
+                  "DeathSound": null,
                   "DetectionRange": 1200,
                   "EnemyName": "protoGoblin",
                   "HealthMax": 6000,
-                  "IsPassive": true,
+                  "HitFlashDuration": 0.03,
+                  "HitFlashIntensity": 4,
+                  "HitSound": "sounds/kenney/ui/ui.downvote.sound",
+                  "IsPassive": false,
                   "MoveSpeed": 150,
                   "OnComponentDestroy": null,
                   "OnComponentDisabled": null,
@@ -9072,7 +9549,7 @@
                 {
                   "__type": "Sandbox.NavMeshAgent",
                   "__guid": "29d26362-e677-471b-beb5-10bbd5bd863a",
-                  "__enabled": true,
+                  "__enabled": false,
                   "Flags": 0,
                   "Acceleration": 150,
                   "AllowDefaultArea": true,
@@ -9132,11 +9609,11 @@
                   "__enabled": true,
                   "Flags": 0,
                   "BoxSize": "29.11,25.39,39.97864",
-                  "Center": "0,0,20.9599",
+                  "Center": "0,0,14.5298",
                   "ColliderFlags": 0,
                   "Elasticity": null,
                   "Friction": null,
-                  "Height": 40.43033,
+                  "Height": 28.750414,
                   "IsTrigger": false,
                   "OnComponentDestroy": null,
                   "OnComponentDisabled": null,
@@ -9149,7 +9626,7 @@
                   "OnTriggerEnter": null,
                   "OnTriggerExit": null,
                   "Points": [],
-                  "Radius": 16,
+                  "Radius": 8.129935,
                   "Radius2": 0,
                   "RollingResistance": null,
                   "Slices": 5,
@@ -9157,6 +9634,24 @@
                   "Surface": null,
                   "SurfaceVelocity": "0,0,0",
                   "Type": "Cylinder"
+                },
+                {
+                  "__type": "Sandbox.ManualHitbox",
+                  "__guid": "5dae078e-997c-4f40-863a-45f924b98fe1",
+                  "__enabled": true,
+                  "Flags": 0,
+                  "CenterA": "2.319999,0.2200017,34.60004",
+                  "CenterB": "0,0,0",
+                  "HitboxTags": "head",
+                  "OnComponentDestroy": null,
+                  "OnComponentDisabled": null,
+                  "OnComponentEnabled": null,
+                  "OnComponentFixedUpdate": null,
+                  "OnComponentStart": null,
+                  "OnComponentUpdate": null,
+                  "Radius": 8.769986,
+                  "Shape": "Sphere",
+                  "Target": null
                 }
               ],
               "Children": [
@@ -12945,9 +13440,122 @@
             "_type": "gameobject",
             "go": "ee43a9bc-04ab-4d38-aa93-dfe193b02603"
           }
+        },
+        {
+          "__type": "DamageNumberConfig",
+          "__guid": "f29e5be3-994b-4fcc-83d0-3cdd160e985a",
+          "__enabled": false,
+          "Flags": 0,
+          "FadeStart": 0.5,
+          "JitterRadius": 12,
+          "Lifetime": 0.9,
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null,
+          "PanelSize": "512,256",
+          "RenderScale": 1,
+          "RiseAmount": 90,
+          "StartOffsetUp": 30
         }
       ],
       "Children": []
+    },
+    {
+      "__guid": "7edc258d-acb1-48ce-8d48-b5bbe8f32aad",
+      "__version": 2,
+      "Flags": 0,
+      "Name": "sm_prop_weapon_arrow_dungeon",
+      "Position": "-129.3825,597.5278,32.17843",
+      "Rotation": "0,0,0,1",
+      "Scale": "1.928183,1.928183,1.928183",
+      "Tags": "",
+      "Enabled": true,
+      "NetworkMode": 2,
+      "NetworkFlags": 0,
+      "NetworkOrphaned": 0,
+      "NetworkTransmit": true,
+      "OwnerTransfer": 1,
+      "Components": [
+        {
+          "__type": "Sandbox.ModelRenderer",
+          "__guid": "7348a4f7-eece-4e30-a137-3e115e096d19",
+          "__enabled": true,
+          "Flags": 0,
+          "BodyGroups": 18446744073709551615,
+          "CreateAttachments": false,
+          "LodOverride": null,
+          "MaterialGroup": null,
+          "MaterialOverride": null,
+          "Materials": null,
+          "Model": "sm_prop_weapon_arrow_dungeon.vmdl",
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null,
+          "RenderOptions": {
+            "GameLayer": true,
+            "OverlayLayer": false,
+            "BloomLayer": false,
+            "AfterUILayer": false
+          },
+          "RenderType": "On",
+          "Tint": "1,1,1,1"
+        }
+      ],
+      "Children": []
+    },
+    {
+      "__guid": "de5f76d3-3d62-4075-985c-a8ad5ebb30e1",
+      "__version": 2,
+      "__Prefab": "prefabs/weapons/sword.prefab",
+      "__PrefabInstancePatch": {
+        "AddedObjects": [],
+        "RemovedObjects": [],
+        "PropertyOverrides": [
+          {
+            "Target": {
+              "Type": "GameObject",
+              "IdValue": "35a7d713-4917-44cf-b642-af82169c050c"
+            },
+            "Property": "Enabled",
+            "Value": false
+          }
+        ],
+        "MovedObjects": []
+      },
+      "__PrefabIdToInstanceId": {
+        "35a7d713-4917-44cf-b642-af82169c050c": "de5f76d3-3d62-4075-985c-a8ad5ebb30e1",
+        "0919da13-8243-4196-a850-e5d2e456de4d": "c7250a19-e7e9-4c11-8a61-51c155cdff8e"
+      }
+    },
+    {
+      "__guid": "b6304b6e-df3f-4602-90c6-f0f78ada2462",
+      "__version": 2,
+      "__Prefab": "prefabs/weapons/bow.prefab",
+      "__PrefabInstancePatch": {
+        "AddedObjects": [],
+        "RemovedObjects": [],
+        "PropertyOverrides": [
+          {
+            "Target": {
+              "Type": "GameObject",
+              "IdValue": "7cbf6de7-98f2-41dd-9fdd-868ba2d28b1c"
+            },
+            "Property": "Enabled",
+            "Value": false
+          }
+        ],
+        "MovedObjects": []
+      },
+      "__PrefabIdToInstanceId": {
+        "7cbf6de7-98f2-41dd-9fdd-868ba2d28b1c": "b6304b6e-df3f-4602-90c6-f0f78ada2462",
+        "3be5720e-fbc0-4b44-8881-98115ed1914d": "f71769d5-f2bb-4269-9cda-0267ec87db26"
+      }
     }
   ],
   "SceneProperties": {
@@ -12960,10 +13568,10 @@
       "Group": "Networking"
     },
     "NavMesh": {
-      "Enabled": true,
+      "Enabled": false,
       "IncludeStaticBodies": true,
       "IncludeKeyframedBodies": true,
-      "EditorAutoUpdate": true,
+      "EditorAutoUpdate": false,
       "AgentHeight": 64,
       "AgentRadius": 16,
       "AgentStepSize": 22,
@@ -12977,13 +13585,13 @@
       }
     },
     "GameObjectSystems": {
-      "Sandbox.Clutter.ClutterGridSystem": {
-        "Storage": {
-          "$blob": "b7d810cf-1e4f-4c98-b3b6-797ee82595be"
-        }
-      },
       "Sandbox.MovieMaker.MovieRecorderSystem": {
         "DisableClientRecording": false
+      },
+      "Sandbox.Clutter.ClutterGridSystem": {
+        "Storage": {
+          "$blob": "a01dfc02-b8f1-4e3b-9b1d-ecd5845a1a07"
+        }
       }
     }
   },

@@ -12,6 +12,7 @@
     <Project Path="Libraries/bugge.unity_importer/Editor/unity_importer.editor.csproj" />
     <Project Path="Libraries/bugge.unity_importer/UnitTests/unity_importer.unittest.csproj" />
     <Project Path="Libraries/calloway.netkit/Code/NetKit.csproj" />
+    <Project Path="Libraries/calloway.netkit/Editor/NetKit.editor.csproj" />
     <Project Path="Libraries/calloway.netkit/UnitTests/NetKit.unittest.csproj" />
     <Project Path="Libraries/facepunch.libsdf/Code/libsdf.csproj" />
     <Project Path="Libraries/JiggleBones/Code/jigglebones.csproj" />

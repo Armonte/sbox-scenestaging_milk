@@ -144,6 +144,65 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	/// </summary>
 	protected virtual EnemyBrain CreateBrain() => new EnemyBrain( this );
 
+	/// <summary>
+	/// Editor gizmo for every <see cref="ManualHitbox"/> attached to this enemy.
+	/// ManualHitbox itself ships with no gizmo, so without this the hurtboxes are
+	/// invisible at edit time — wire a ManualHitbox up on the enemy prefab and
+	/// you'll see its wireframe here, color-coded by tag (weakpoint/head/other).
+	/// </summary>
+	protected override void DrawGizmos()
+	{
+		if ( !Gizmo.IsSelected ) return;
+
+		foreach ( var hb in Components.GetAll<ManualHitbox>( FindMode.EverythingInSelfAndDescendants ) )
+		{
+			// Hitbox positions live in the target's local space — if no explicit
+			// target is set, ManualHitbox treats its own GameObject as the frame.
+			var targetObj = hb.Target.IsValid() ? hb.Target : hb.GameObject;
+			if ( !targetObj.IsValid() ) continue;
+
+			// Our own gizmo transform starts as this component's GameObject, so
+			// switching it to the hitbox target's world transform makes the local
+			// CenterA/CenterB values draw in the right place.
+			Gizmo.Transform = targetObj.WorldTransform;
+			Gizmo.Draw.Color = ColorForHitboxTags( hb.HitboxTags );
+			Gizmo.Draw.LineThickness = 1.5f;
+
+			switch ( hb.Shape )
+			{
+				case ManualHitbox.HitboxShape.Sphere:
+					Gizmo.Draw.LineSphere( new Sphere( hb.CenterA, hb.Radius ) );
+					break;
+
+				case ManualHitbox.HitboxShape.Capsule:
+					Gizmo.Draw.LineCapsule( new Capsule( hb.CenterA, hb.CenterB, hb.Radius ) );
+					break;
+
+				case ManualHitbox.HitboxShape.Box:
+					// CenterA / CenterB as opposite corners of an AABB. Gives designers
+					// a simple min/max pair instead of a center + half-extent split.
+					var mins = Vector3.Min( hb.CenterA, hb.CenterB );
+					var maxs = Vector3.Max( hb.CenterA, hb.CenterB );
+					Gizmo.Draw.LineBBox( new BBox( mins, maxs ) );
+					break;
+
+				case ManualHitbox.HitboxShape.Cylinder:
+					// No LineCylinder in the gizmo API — approximate with a capsule
+					// so the volume is at least visually communicated.
+					Gizmo.Draw.LineCapsule( new Capsule( hb.CenterA, hb.CenterB, hb.Radius ) );
+					break;
+			}
+		}
+	}
+
+	private static Color ColorForHitboxTags( TagSet tags )
+	{
+		if ( tags is null ) return Color.White;
+		if ( tags.Has( "weakpoint" ) ) return new Color( 1f, 0.2f, 0.2f ); // red
+		if ( tags.Has( "head" ) ) return new Color( 1f, 0.85f, 0.2f );     // yellow
+		return Color.White;
+	}
+
 	protected override void OnUpdate()
 	{
 		// LOD runs every frame (cheap — one distance check)
@@ -423,6 +482,17 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 		if ( HitSound is not null )
 			Sound.Play( HitSound, WorldPosition );
+	}
+
+	/// <summary>
+	/// Spawn a floating damage number on every client. Called by DamageResolver
+	/// after a successful Resolve so we have access to the final damage and style,
+	/// which the IDamageable interface doesn't expose.
+	/// </summary>
+	[Rpc.Broadcast]
+	public void BroadcastDamageNumber( float amount, DamageNumberStyle style, Vector3 worldPos )
+	{
+		DamageNumber.Spawn( Scene, worldPos, amount, style );
 	}
 
 	private void TickHitFlash()

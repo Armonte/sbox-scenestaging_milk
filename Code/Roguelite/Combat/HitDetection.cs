@@ -53,9 +53,12 @@ public static class HitDetection
 
 	/// <summary>
 	/// Ray/capsule trace from origin in a direction. Standard projectile/melee hit.
+	/// Pass <paramref name="useHitboxes"/> to enable hitbox detection — the resulting
+	/// <see cref="SceneTraceResult.Hitbox"/> will be populated and <see cref="HitContext"/>
+	/// can read its tags for weak-point damage.
 	/// </summary>
 	public static SceneTraceResult Ray( Scene scene, Vector3 from, Vector3 to,
-		float radius = 0f, GameObject ignore = null )
+		float radius = 0f, GameObject ignore = null, bool useHitboxes = false )
 	{
 		var trace = scene.Trace
 			.Ray( from, to )
@@ -66,6 +69,9 @@ public static class HitDetection
 
 		if ( ignore is not null )
 			trace = trace.IgnoreGameObjectHierarchy( ignore );
+
+		if ( useHitboxes )
+			trace = trace.UseHitboxes( true );
 
 		return trace.Run();
 	}

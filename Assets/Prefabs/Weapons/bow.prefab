@@ -1,0 +1,32 @@
+{
+  "RootObject": {
+    "__guid": "7cbf6de7-98f2-41dd-9fdd-868ba2d28b1c",
+    "__version": 1,
+    "Flags": 0,
+    "Name": "Bow",
+    "Position": "0,0,0",
+    "Rotation": "0,0,0,1",
+    "Scale": "1,1,1",
+    "Tags": "",
+    "Enabled": true,
+    "NetworkMode": 2,
+    "NetworkInterpolation": true,
+    "NetworkOrphaned": 0,
+    "OwnerTransfer": 1,
+    "Components": [
+      {
+        "__type": "BowWeapon",
+        "__guid": "3be5720e-fbc0-4b44-8881-98115ed1914d",
+        "__enabled": true
+      }
+    ],
+    "Children": []
+  },
+  "ResourceVersion": 2,
+  "ShowInMenu": false,
+  "MenuPath": null,
+  "MenuIcon": null,
+  "DontBreakAsTemplate": false,
+  "__references": [],
+  "__version": 2
+}

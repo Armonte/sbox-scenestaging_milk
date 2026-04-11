@@ -62,6 +62,34 @@ public static class DamageResolver
 		if ( ctx.IsHeadshot )
 			dmg *= 1.25f;
 
+		// 4. Hitbox weak-point bonuses — applied when the trace used hitboxes and
+		//    the hit hitbox has one of these tags. "weakpoint" is the explicit big
+		//    multiplier; "head" doubles up with the positional heuristic above so
+		//    designers can either tag a head hitbox or rely on the height check.
+		//    Track which visual style the floating damage number should use.
+		var numberStyle = isCrit ? DamageNumberStyle.Crit : DamageNumberStyle.Normal;
+
+		if ( ctx.HasHitboxTag( "weakpoint" ) )
+		{
+			dmg *= 3f;
+			numberStyle = DamageNumberStyle.Weakpoint;
+			Log.Info( $"[DamageResolver] WEAKPOINT hit on {targetObject.Name} — ×3.0 → {dmg:F0} dmg" );
+		}
+		else if ( ctx.HasHitboxTag( "head" ) )
+		{
+			dmg *= 2f;
+			numberStyle = DamageNumberStyle.Headshot;
+			Log.Info( $"[DamageResolver] HEAD hit on {targetObject.Name} — ×2.0 → {dmg:F0} dmg" );
+		}
+		else if ( ctx.HitHitbox )
+		{
+			// Useful when testing: a hitbox was involved but it had no recognized
+			// weak-point tag. If you expected a multiplier here, check the tags on
+			// the ManualHitbox component — casing is ignored, but the tag must
+			// literally be "head" or "weakpoint".
+			Log.Info( $"[DamageResolver] hitbox hit on {targetObject.Name} — no weak-point tag matched" );
+		}
+
 		// 4. Floor at 0
 		dmg = MathF.Max( 0f, dmg );
 
@@ -71,6 +99,15 @@ public static class DamageResolver
 		// 6. Knockback
 		if ( attack.CanKnockback && attack.KnockbackForce > 0 )
 			target.ApplyKnockback( ctx.Direction, attack.KnockbackForce );
+
+		// 7. Floating damage number — broadcast to every client. We do this here (not inside
+		//    the target's ApplyDamage) because crit + final damage live in this scope, and the
+		//    IDamageable interface doesn't expose them.
+		if ( target is RogueliteEnemyBase enemy )
+		{
+			var popPos = ctx.ImpactPoint != Vector3.Zero ? ctx.ImpactPoint : targetObject.WorldPosition;
+			enemy.BroadcastDamageNumber( dmg, numberStyle, popPos );
+		}
 
 		return new DamageResult( dmg, isCrit, target.IsDead, ctx );
 	}

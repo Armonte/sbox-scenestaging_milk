@@ -12,6 +12,19 @@ public readonly struct HitContext
 	public readonly bool IsBackstab;
 	public readonly bool IsHeadshot;
 
+	/// <summary>
+	/// True when the trace hit a hitbox (ManualHitbox/ModelHitboxes), false when it
+	/// hit a plain physics collider. Lets diagnostics distinguish the two cases
+	/// without having to probe .Tags (which NREs on default-struct hitboxes).
+	/// </summary>
+	public readonly bool HitHitbox;
+
+	/// <summary>
+	/// Tag set from the hitbox that was hit, if the trace used hitboxes and hit one.
+	/// Null when no hitbox was involved. Use <see cref="HasHitboxTag"/> for lookups.
+	/// </summary>
+	public readonly ITagSet HitboxTags;
+
 	public HitContext(
 		Vector3 origin,
 		Vector3 direction,
@@ -19,7 +32,9 @@ public readonly struct HitContext
 		Vector3 impactNormal,
 		float distance,
 		bool isBackstab,
-		bool isHeadshot )
+		bool isHeadshot,
+		ITagSet hitboxTags = null,
+		bool hitHitbox = false )
 	{
 		Origin = origin;
 		Direction = direction;
@@ -28,10 +43,18 @@ public readonly struct HitContext
 		Distance = distance;
 		IsBackstab = isBackstab;
 		IsHeadshot = isHeadshot;
+		HitboxTags = hitboxTags;
+		HitHitbox = hitHitbox;
+	}
+
+	public bool HasHitboxTag( string tag )
+	{
+		return HitboxTags is not null && HitboxTags.Has( tag );
 	}
 
 	/// <summary>
 	/// Build a HitContext from a scene trace result. Automatically detects backstab and headshot.
+	/// If the trace was run with <c>.UseHitboxes()</c>, also captures the hitbox tag set.
 	/// </summary>
 	public static HitContext FromTrace( SceneTraceResult tr, Component attacker )
 	{
@@ -53,6 +76,19 @@ public readonly struct HitContext
 			isHeadshot = heightAboveCenter > 60f;
 		}
 
+		// tr.Hitbox is a struct — when the trace hit geometry without a hitbox (world,
+		// a collider with no ModelHitboxes/ManualHitbox attached, etc.) its .Tags getter
+		// dereferences uninitialized state and NREs, so guard it. Non-hitbox hits just
+		// end up with null tags and HasHitboxTag returns false cleanly.
+		ITagSet hitboxTags = null;
+		var hitHitbox = false;
+		try
+		{
+			hitboxTags = tr.Hitbox.Tags;
+			hitHitbox = hitboxTags is not null;
+		}
+		catch { /* trace didn't produce a hitbox — leave flags at default */ }
+
 		return new HitContext(
 			tr.StartPosition,
 			tr.Direction,
@@ -60,6 +96,8 @@ public readonly struct HitContext
 			tr.Normal,
 			tr.Distance,
 			isBackstab,
-			isHeadshot );
+			isHeadshot,
+			hitboxTags,
+			hitHitbox );
 	}
 }
