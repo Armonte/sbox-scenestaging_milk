@@ -45,8 +45,8 @@ public sealed class RogueliteDebug : Component
 		// T is our modifier key — must be held
 		if ( !Input.Down( "use" ) ) return;
 
-		var eyePos = _localPlayer.WorldPosition + Vector3.Up * _localPlayer.Camera.EyeHeight;
-		var forward = _localPlayer.Camera.EyeAngles.ToRotation().Forward;
+		var eyePos = _localPlayer.WorldPosition + Vector3.Up * _localPlayer.EyeHeight;
+		var forward = _localPlayer.EyeAngles.ToRotation().Forward;
 		var aimPoint = GetAimPoint( eyePos, forward );
 
 		// --- Enemy Spawning (T + 1-4) ---

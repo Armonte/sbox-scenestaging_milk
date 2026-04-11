@@ -1,0 +1,9 @@
+@inherits Sandbox.UI.Panel
+@namespace Iconify
+
+<root class="iconify-icon">
+	@if ( _texture is not null )
+	{
+		<img src="@_texture.ResourcePath" style="width: @(Size)px; height: @(Size)px;" />
+	}
+</root>

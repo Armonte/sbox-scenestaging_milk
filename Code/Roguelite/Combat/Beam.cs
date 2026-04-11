@@ -87,8 +87,8 @@ public class Beam : Component
 			var player = Owner.Components.Get<RoguelitePlayer>();
 			if ( player is not null )
 			{
-				var rot = player.Camera.EyeAngles.ToRotation();
-				eyePos = player.WorldPosition + Vector3.Up * player.Camera.EyeHeight;
+				var rot = player.EyeAngles.ToRotation();
+				eyePos = player.WorldPosition + Vector3.Up * player.EyeHeight;
 				direction = rot.Forward;
 				origin = eyePos + rot.Right * 20f + rot.Down * 8f + rot.Forward * 10f;
 			}

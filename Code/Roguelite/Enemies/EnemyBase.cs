@@ -40,6 +40,41 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	[Sync] public bool IsStunned { get; set; }
 	[Sync] public bool IsMoving { get; set; }
 
+	// --- Hit flash ---
+	/// <summary>
+	/// Seconds the unlit-white override stays on after a hit. Short = snappy pop.
+	/// </summary>
+	[Property, Group( "Feedback" )] public float HitFlashDuration { get; set; } = 0.03f;
+
+	/// <summary>
+	/// Intensity pushed into the hit_flash shader's FlashIntensity attribute. &gt;1 blows out under bloom.
+	/// </summary>
+	[Property, Group( "Feedback" )] public float HitFlashIntensity { get; set; } = 4f;
+
+	// --- Sound ---
+	/// <summary>
+	/// Plays when the enemy takes damage. Fires for everyone via the hit-flash RPC.
+	/// </summary>
+	[Property, Group( "Sound" )] public SoundEvent HitSound { get; set; }
+
+	/// <summary>
+	/// Plays the instant the attack windup begins (same frame as the attack animation start).
+	/// Use this for charge-up grunts, weapon raises, telegraph cues.
+	/// </summary>
+	[Property, Group( "Sound" )] public SoundEvent AttackWindupSound { get; set; }
+
+	/// <summary>
+	/// Plays at the moment of impact, AttackHitDelay seconds into the swing. Each client schedules
+	/// this locally off the same animation-start RPC, so visual + audio stay in lockstep without
+	/// a separate network round-trip.
+	/// </summary>
+	[Property, Group( "Sound" )] public SoundEvent AttackImpactSound { get; set; }
+
+	/// <summary>
+	/// Plays once when the enemy dies.
+	/// </summary>
+	[Property, Group( "Sound" )] public SoundEvent DeathSound { get; set; }
+
 	public event Action OnDeathEvent;
 
 	public RoguelitePlayer CurrentTarget;
@@ -49,6 +84,15 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	private float _stunTimer;
 	private bool _wantsToAttack;
 	private SkinnedModelRenderer _model;
+	private float _hitFlashTimer;
+	private bool _flashApplied;
+	// Local-client timer for the attack impact sound. Set when BroadcastAttackAnim fires,
+	// counts down per frame on every client (including the host), plays AttackImpactSound when it hits 0.
+	private float _impactSoundTimer;
+	// Per-enemy unique Material instance (Material.FromShader returns a cached singleton —
+	// we have to use Material.Create to get a fresh instance, otherwise renderer dedup
+	// silently no-ops every other override toggle).
+	private Material _flashMaterial;
 
 
 	protected override void OnStart()
@@ -73,6 +117,12 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			_model.Sequence.Name = "idle";
 			_model.Sequence.Looping = true;
 		}
+
+		// Per-enemy unique Material — Material.Create with anonymous=true skips the shader cache
+		// so this instance is genuinely unique to this enemy.
+		_flashMaterial = Material.Create( $"flash_{GameObject.Id}", "shaders/hit_flash.shader", true );
+		if ( _flashMaterial is null )
+			Log.Warning( "[RogueliteEnemy] hit_flash.shader failed to load" );
 
 		// Let NavMeshAgent handle position — it respects walls and navmesh topology
 		Nav.UpdatePosition = true;
@@ -104,6 +154,13 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		// Animation update — only once per frame (also called on clients via shouldAnimate)
 		if ( _shouldAnimate )
 			UpdateAnimation();
+
+		// Hit flash decays on every client so the visual pop is seen by everyone.
+		TickHitFlash();
+
+		// Each client times its own attack-impact sound off the BroadcastAttackAnim RPC,
+		// so audio + animation stay in lockstep without a second network round-trip.
+		TickAttackImpactSound();
 
 		if ( !Networking.IsHost ) return;
 		if ( IsDead ) return;
@@ -310,6 +367,16 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		IsAttacking = true;
 		_attackAnimTimer = 0.8f / speed;
 
+		// Audio fires regardless of LOD model state — an enemy attacking off-screen
+		// should still be audible. Animation setup below is the only LOD-gated bit.
+		if ( AttackWindupSound is not null )
+			Sound.Play( AttackWindupSound, WorldPosition );
+
+		// Schedule the impact sound on this client, locked to the same animation start so
+		// visual + audio stay in sync without a second network round-trip.
+		if ( AttackImpactSound is not null )
+			_impactSoundTimer = AttackHitDelay / speed;
+
 		if ( _model is null || !_model.Enabled ) return;
 		_model.Sequence.Name = "attack";
 		_model.Sequence.Time = 0;
@@ -317,6 +384,17 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		_model.PlaybackRate = speed; // Speed up/slow down animation
 		if ( _model.Sequence.Duration > 0 )
 			_attackAnimTimer = _model.Sequence.Duration / speed;
+	}
+
+	private void TickAttackImpactSound()
+	{
+		if ( _impactSoundTimer <= 0f ) return;
+
+		_impactSoundTimer -= Time.Delta;
+		if ( _impactSoundTimer <= 0f && AttackImpactSound is not null )
+		{
+			Sound.Play( AttackImpactSound, WorldPosition );
+		}
 	}
 
 	public void ApplyDamage( float amount, DamageType type, Component attacker )
@@ -328,11 +406,56 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 		if ( attacker is not null )
 			RecordThreat( attacker.GameObject, amount );
 
+		BroadcastHitFlash();
+
 		if ( HealthCurrent <= 0 )
 		{
 			IsDead = true;
 			OnDeath();
 		}
+	}
+
+	[Rpc.Broadcast]
+	private void BroadcastHitFlash()
+	{
+		_hitFlashTimer = HitFlashDuration;
+		ApplyFlashOverride( true );
+
+		if ( HitSound is not null )
+			Sound.Play( HitSound, WorldPosition );
+	}
+
+	private void TickHitFlash()
+	{
+		if ( _hitFlashTimer <= 0f ) return;
+
+		_hitFlashTimer -= Time.Delta;
+		if ( _hitFlashTimer <= 0f )
+		{
+			ApplyFlashOverride( false );
+		}
+	}
+
+	private void ApplyFlashOverride( bool on )
+	{
+		if ( _model is null || _flashMaterial is null ) return;
+		if ( on == _flashApplied ) return; // already in the requested state
+
+		// `< Attribute("FlashIntensity") >` in the shader binds to the renderer's RenderAttributes
+		// table, NOT to a material parameter — so we have to push it on the renderer here, not on
+		// the material in OnStart. Pushing it every time we toggle on lets HitFlashIntensity be
+		// hot-tuned in the inspector at runtime.
+		if ( on )
+			_model.Attributes.Set( "FlashIntensity", HitFlashIntensity );
+
+		// Per-slot override via MaterialAccessor — different code path from the global
+		// MaterialOverride property, with explicit "set null to clear" semantics.
+		var count = _model.Materials.Count;
+		for ( int i = 0; i < count; i++ )
+		{
+			_model.Materials.SetOverride( i, on ? _flashMaterial : null );
+		}
+		_flashApplied = on;
 	}
 
 	// --- Inlined Aggro ---
@@ -575,7 +698,11 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	}
 
 	[Rpc.Broadcast]
-	private void BroadcastDeath() { }
+	private void BroadcastDeath()
+	{
+		if ( DeathSound is not null )
+			Sound.Play( DeathSound, WorldPosition );
+	}
 
 	// --- Animation ---
 

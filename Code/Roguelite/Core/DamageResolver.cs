@@ -89,8 +89,8 @@ public static class DamageResolver
 
 		if ( player is not null )
 		{
-			eyePos = attacker.WorldPosition + Vector3.Up * 64f;
-			forward = player.Camera.EyeAngles.ToRotation().Forward;
+			eyePos = attacker.WorldPosition + Vector3.Up * player.EyeHeight;
+			forward = player.EyeAngles.ToRotation().Forward;
 		}
 		else
 		{

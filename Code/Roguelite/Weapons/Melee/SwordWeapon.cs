@@ -111,12 +111,11 @@ public sealed class SwordWeapon : WeaponBase
 
 	private void PiercingDash()
 	{
-		var movement = Owner?.Movement;
-		if ( movement is null ) return;
+		if ( Owner is null ) return;
 
 		var attack = BuildAttack( 1.4f, DamageType.Pierce );
 
-		movement.DashForward( 400f, ( tr ) =>
+		Owner.DashForward( 400f, ( tr ) =>
 		{
 			if ( tr.GameObject is not null )
 			{
@@ -145,10 +144,7 @@ public sealed class SwordWeapon : WeaponBase
 	{
 		if ( Owner is null ) return;
 
-		var camera = Owner.Components.Get<PlayerCamera>();
-		if ( camera is null ) return;
-
-		var lookRot = camera.EyeAngles.ToRotation();
+		var lookRot = Owner.EyeAngles.ToRotation();
 		var forward = lookRot.Forward;
 		var right = lookRot.Right;
 

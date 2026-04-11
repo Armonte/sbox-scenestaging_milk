@@ -6,8 +6,12 @@
   "Schema": 1,
   "IncludeSourceFiles": false,
   "Resources": null,
-  "PackageReferences": [],
-  "EditorReferences": null,
+  "PackageReferences": [
+    "calloway.netkit"
+  ],
+  "EditorReferences": [
+    "bugge.unity_importer"
+  ],
   "Mounts": null,
   "IsStandaloneOnly": false,
   "Metadata": {

@@ -34,7 +34,7 @@ public sealed class CubeAbility : IAbility
 			var player = target.Components.Get<RoguelitePlayer>( FindMode.EverythingInSelfAndDescendants );
 			if ( player is null ) return false;
 
-			player.Movement.SetFrozen( true );
+			player.SetFrozen( true );
 
 			// Accelerate their ability cooldowns
 			player.Abilities.AccelerateCooldowns( CooldownAcceleration );
@@ -53,6 +53,6 @@ public sealed class CubeAbility : IAbility
 	{
 		await GameTask.DelayRealtimeSeconds( seconds );
 		if ( player.IsValid() )
-			player.Movement.SetFrozen( false );
+			player.SetFrozen( false );
 	}
 }

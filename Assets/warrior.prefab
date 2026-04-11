@@ -8,45 +8,13 @@
     "Rotation": "0,0,0,1",
     "Scale": "1,1,1",
     "Tags": "green,red",
-    "Enabled": false,
+    "Enabled": true,
     "NetworkMode": 2,
     "NetworkFlags": 0,
     "NetworkOrphaned": 0,
     "NetworkTransmit": true,
     "OwnerTransfer": 1,
     "Components": [
-      {
-        "__type": "RogueliteDebug",
-        "__guid": "2987ecf1-df11-4d2d-9f0f-cc7802fab055",
-        "__enabled": true,
-        "Flags": 0,
-        "EnemyPrefab": {
-          "_type": "gameobject",
-          "go": "f47a1194-41da-415c-b773-51af21b19abb"
-        },
-        "FlyerPrefab": {
-          "_type": "gameobject",
-          "go": "3b4f52be-720a-4fc5-a932-726b7dbd87be"
-        },
-        "MinionPrefab": {
-          "_type": "gameobject",
-          "go": "f47a1194-41da-415c-b773-51af21b19abb"
-        },
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null,
-        "RusherPrefab": {
-          "_type": "gameobject",
-          "go": "9e84aac8-d3d8-41be-bdd0-a1fb989e0fbc"
-        },
-        "SummonerPrefab": {
-          "_type": "gameobject",
-          "go": "ee43a9bc-04ab-4d38-aa93-dfe193b02603"
-        }
-      },
       {
         "__type": "Sandbox.CharacterController",
         "__guid": "3f528e94-32ca-4dab-8d31-183b106deb80",
@@ -71,14 +39,19 @@
         "__type": "RoguelitePlayer",
         "__guid": "89c09c92-37d4-4214-82a2-a7c92902e4be",
         "__enabled": true,
-        "Flags": 0,
         "Class": "Warrior",
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null
+        "HealthMax": 600,
+        "BaseSpeed": 280,
+        "JumpForce": 300,
+        "Gravity": "0,0,800",
+        "GroundAcceleration": 10,
+        "AirAcceleration": 50,
+        "AirMaxWishSpeed": 30,
+        "GroundFriction": 4,
+        "DashSpeed": 600,
+        "EyeHeight": 64,
+        "FirstPerson": true,
+        "ThirdPersonDistance": 300
       },
       {
         "__type": "Sandbox.Citizen.CitizenAnimationHelper",
@@ -111,68 +84,6 @@
           "go": "1dc1852e-3741-4d03-a37d-b30c59440abf",
           "component_type": "SkinnedModelRenderer"
         }
-      },
-      {
-        "__type": "RogueliteHealthComponent",
-        "__guid": "4f92e898-ed3f-4bce-acd9-1b470f157ea6",
-        "__enabled": true,
-        "Flags": 0,
-        "MaxHealth": 100,
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null
-      },
-      {
-        "__type": "FactionComponent",
-        "__guid": "ddf5ded2-908f-4d67-81f2-144fd9e7a824",
-        "__enabled": true,
-        "Flags": 0,
-        "Faction": "Player",
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null
-      },
-      {
-        "__type": "PlayerMovement",
-        "__guid": "c3f551cf-1ffe-4798-b9eb-c3b1a548039d",
-        "__enabled": true,
-        "Flags": 0,
-        "AirAcceleration": 100,
-        "AirMaxWishSpeed": 30,
-        "BaseSpeed": 280,
-        "DashCooldown": 2,
-        "DashSpeed": 600,
-        "Gravity": "0,0,800",
-        "GroundAcceleration": 10,
-        "GroundFriction": 4,
-        "JumpForce": 300,
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null
-      },
-      {
-        "__type": "PlayerCamera",
-        "__guid": "cfba37a4-2572-418d-9ced-fb95e238ee24",
-        "__enabled": true,
-        "Flags": 0,
-        "EyeHeight": 64,
-        "FirstPerson": true,
-        "OnComponentDestroy": null,
-        "OnComponentDisabled": null,
-        "OnComponentEnabled": null,
-        "OnComponentFixedUpdate": null,
-        "OnComponentStart": null,
-        "OnComponentUpdate": null,
-        "ThirdPersonDistance": 300
       },
       {
         "__type": "Sandbox.CapsuleCollider",
@@ -1303,10 +1214,7 @@
                                                     "__guid": "3ebb7f81-dc9d-4064-a287-d5d3cdc22be8",
                                                     "__enabled": true,
                                                     "Flags": 0,
-                                                    "ObjectToSpawn": {
-                                                      "_type": "gameobject",
-                                                      "go": "087550f3-8196-4f3b-8a2f-5c8b4bd33631"
-                                                    },
+                                                    "ObjectToSpawn": null,
                                                     "OnComponentDestroy": null,
                                                     "OnComponentDisabled": null,
                                                     "OnComponentEnabled": null,

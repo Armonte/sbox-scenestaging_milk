@@ -1,0 +1,24 @@
+{
+  "Title": "Sbox Iconify",
+  "Type": "library",
+  "Org": "mint",
+  "Ident": "iconify",
+  "Schema": 1,
+  "IncludeSourceFiles": false,
+  "Resources": null,
+  "PackageReferences": [],
+  "EditorReferences": null,
+  "Mounts": null,
+  "IsStandaloneOnly": false,
+  "Metadata": {
+    "Summary": "Use 200,000+ icons from Phosphor, Material Design, Tabler, and more in your S&Box UI. Drop-in <iconify> tag with runtime fetching and local caching.",
+    "Description": "A simple icon library for S&Box that fetches icons from the Iconify API. Supports all major icon packs including Phosphor, Material Design Icons, Tabler, Lucide, and Game Icons. Icons are cached locally after first load. Inspired by Facepunch's sbox-iconify and UmbleStudio's implementation.",
+    "Compiler": {
+      "RootNamespace": "Iconify",
+      "DefineConstants": "SANDBOX;ADDON;DEBUG",
+      "NoWarn": "1701;1702;1591;",
+      "Nullables": true,
+      "ReleaseMode": "Debug"
+    }
+  }
+}
