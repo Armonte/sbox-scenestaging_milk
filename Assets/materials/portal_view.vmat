@@ -1,0 +1,29 @@
+// Portal surface material — renders the linked portal's camera view.
+// The PortalTexture is set per-frame by Portal.cs via CommandList attributes.
+
+Layer0
+{
+	shader "shaders/portal_view.shader"
+
+	//---- Rendering ----
+	F_DO_NOT_CAST_SHADOWS 1
+
+	//---- Fog ----
+	g_bFogEnabled "1"
+
+	//---- Portal ----
+	g_vFallbackColor "[0.020000 0.010000 0.050000 1.000000]"
+	g_vEdgeTint "[0.300000 0.100000 0.800000 1.000000]"
+	g_flEdgeWidth "0.050000"
+
+	//---- Material ----
+	TextureColor "[0.020000 0.010000 0.050000 0.000000]"
+	TextureNormal "[0.501961 0.501961 1.000000 0.000000]"
+	TextureRoughness "[1.000000 1.000000 1.000000 0.000000]"
+
+	SystemAttributes
+	{
+		WorldMappingWidth "64"
+		WorldMappingHeight "64"
+	}
+}

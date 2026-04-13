@@ -53,7 +53,8 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 
 	// --- Sound ---
 	/// <summary>
-	/// Plays when the enemy takes damage. Fires for everyone via the hit-flash RPC.
+	/// Enemy-side reaction sound when this enemy takes damage (grunt, armor clank).
+	/// For the attacker's "I hit something" feedback ping, set HitSound on the weapon.
 	/// </summary>
 	[Property, Group( "Sound" )] public SoundEvent HitSound { get; set; }
 
@@ -613,8 +614,10 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 	{
 		if ( _model is null ) return;
 
-		var cam = Scene.Camera;
-		if ( cam is null ) return;
+		// LOD visibility culling was causing enemies to vanish when portal cameras
+		// or other non-main cameras were present in the scene — ripped out entirely.
+		// Enemies always render; let the engine handle frustum culling natively.
+		_model.Enabled = true;
 
 		_lodFrameCounter++;
 
@@ -626,21 +629,12 @@ public class RogueliteEnemyBase : Component, global::IDamageable
 			_nearbyEnemyCount = 0;
 		}
 
-		var distSq = WorldPosition.DistanceSquared( cam.WorldPosition );
-
-		// Viewport check
-		var toEnemy = (WorldPosition - cam.WorldPosition).Normal;
-		var inView = Vector3.Dot( cam.WorldRotation.Forward, toEnemy ) > -0.2f;
-
-		if ( distSq > LodCull * LodCull || !inView )
-		{
-			_model.Enabled = false;
-			_shouldAnimate = false;
-			_isClose = false;
-			return;
-		}
-
-		_model.Enabled = true;
+		// Still compute _isClose for animation rate scaling, using any available
+		// camera — if none, treat everything as close (full animation rate).
+		var cam = Scene.Camera;
+		var distSq = cam is not null
+			? WorldPosition.DistanceSquared( cam.WorldPosition )
+			: 0f;
 		_isClose = distSq < LodClose * LodClose;
 
 		if ( _isClose )
