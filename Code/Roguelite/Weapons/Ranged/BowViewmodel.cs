@@ -56,24 +56,25 @@ public sealed class BowViewmodel : Component
 	/// captured at OnStart, so tune these in the inspector until the bend looks
 	/// right — don't touch the model's own rest pose.
 	/// </summary>
-	// Yaw is the working axis for this rig's limbs — found empirically, per-bone
-	// amplitudes tuned so the bow reads as "under tension" at full draw. If you
-	// swap in a different bow model, re-tune these in the inspector.
+	// Yaw is the working axis for this rig's limbs — found empirically. Bones
+	// with (0,0,0) are deliberately left alone so they cascade naturally from
+	// their parent via the skeleton hierarchy. If you swap in a different bow
+	// model, re-tune these in the inspector.
 	[Property, Group( "Draw Animation" )]
 	public List<BoneDrawEntry> DrawBones { get; set; } = new()
 	{
 		// Inner limbs — the main visible bend toward the shooter
-		new BoneDrawEntry { BoneName = "Bow_L_1",   DrawRotation = new Angles( 0f, -45f, 0f ) },
-		new BoneDrawEntry { BoneName = "Bow_R_1",   DrawRotation = new Angles( 0f,  45f, 0f ) },
-		// Outer limbs — smaller additive bend on the tip for a natural curve
-		new BoneDrawEntry { BoneName = "Bow_L_2",   DrawRotation = new Angles( 0f, -15f, 0f ) },
-		new BoneDrawEntry { BoneName = "Bow_R_2",   DrawRotation = new Angles( 0f,  15f, 0f ) },
-		// String attachment points — usually follow the limbs for free
+		new BoneDrawEntry { BoneName = "Bow_L_1",    DrawRotation = new Angles( 0f,  10f, 0f ) },
+		new BoneDrawEntry { BoneName = "Bow_R_1",    DrawRotation = new Angles( 0f, -10f, 0f ) },
+		// Outer limbs — smaller additive bend for a natural curve
+		new BoneDrawEntry { BoneName = "Bow_L_2",    DrawRotation = new Angles( 0f,  5f, 0f ) },
+		new BoneDrawEntry { BoneName = "Bow_R_2",    DrawRotation = new Angles( 0f, -5f, 0f ) },
+		// String tips — cascade from limbs (zero = don't override, let hierarchy handle it)
 		new BoneDrawEntry { BoneName = "String_L_1", DrawRotation = Angles.Zero },
 		new BoneDrawEntry { BoneName = "String_R_1", DrawRotation = Angles.Zero },
-		// String mid-segments — tune these if the string doesn't visibly pull
-		new BoneDrawEntry { BoneName = "String_L_2", DrawRotation = Angles.Zero },
-		new BoneDrawEntry { BoneName = "String_R_2", DrawRotation = Angles.Zero },
+		// String mid-segments — pull the string's V-apex toward the shooter
+		new BoneDrawEntry { BoneName = "String_L_2", DrawRotation = new Angles( 0f, -20f, 0f ) },
+		new BoneDrawEntry { BoneName = "String_R_2", DrawRotation = new Angles( 0f, -20f, 0f ) },
 	};
 
 	/// <summary>
@@ -277,20 +278,26 @@ public sealed class BowViewmodel : Component
 			_skinnedBow.UseAnimGraph = false;
 
 		// Bone-level draw animation — override each configured bone's LOCAL
-		// transform via SetBoneTransform. Working in local space means the
-		// camera-parent hierarchy handles all world-space positioning for us;
-		// we just rotate each bone in its parent frame.
-		//
-		// At progress=0 this writes the exact rest local transform (no-op),
-		// so the bow should be visible at rest. At progress>0, we compose the
-		// rotation offset on top of the cached rest.
+		// transform via SetBoneTransform. Only bones with a non-zero DrawRotation
+		// get written; bones at zero rotation are LEFT ALONE so they cascade
+		// naturally from their parent's override through the skeleton hierarchy.
+		// Without this skip, writing restLocal back to a child bone pins it to
+		// bind pose and breaks the parent → child cascade (the limb tip + string
+		// stay put while the inner limb rotates independently).
 		foreach ( var entry in DrawBones )
 		{
 			if ( string.IsNullOrEmpty( entry.BoneName ) ) continue;
+
+			// Skip bones with no draw rotation — let the skeleton hierarchy
+			// cascade the parent's rotation to these children naturally.
+			var rot = entry.DrawRotation;
+			if ( rot.pitch == 0f && rot.yaw == 0f && rot.roll == 0f )
+				continue;
+
 			if ( !_boneRestPoses.TryGetValue( entry.BoneName, out var cached ) ) continue;
 			if ( _skinnedBow is null ) break;
 
-			var offset = Rotation.Slerp( Rotation.Identity, Rotation.From( entry.DrawRotation ), _currentDrawProgress );
+			var offset = Rotation.Slerp( Rotation.Identity, Rotation.From( rot ), _currentDrawProgress );
 			var newLocalRot = cached.RestLocalTransform.Rotation * offset;
 			var newTransform = new Transform(
 				cached.RestLocalTransform.Position,
@@ -299,10 +306,6 @@ public sealed class BowViewmodel : Component
 
 			_skinnedBow.SetBoneTransform( cached.BoneRef, newTransform );
 		}
-
-		// Draw-pose diagnostic removed now that the bone pipeline works — we'll
-		// add it back if something regresses. Keep the frame-1 heartbeat and
-		// cache-attempt logs since they're only a handful of lines total.
 
 		// Nocked arrow pull-back: skip while the fade tween is running so we
 		// don't fight its position writes. The fade only changes LocalScale
@@ -322,6 +325,18 @@ public sealed class BowViewmodel : Component
 	public void SetDrawProgress( float progress )
 	{
 		_currentDrawProgress = Math.Clamp( progress, 0f, 1f );
+	}
+
+	/// <summary>
+	/// Snap the viewmodel back to rest pose immediately — called by
+	/// <see cref="BowWeapon.FireArrow"/> before reading NockPoint.WorldPosition
+	/// so the projectile spawns from the bowstring's rest position, not from
+	/// wherever the draw animation left the nock on the previous frame.
+	/// </summary>
+	public void ForceRestPose()
+	{
+		_currentDrawProgress = 0f;
+		ApplyDrawPose();
 	}
 
 	private void EnsureRenderers()
@@ -426,6 +441,12 @@ public sealed class BowViewmodel : Component
 
 		CacheNockedArrowTransform();
 		NockFadeDuration = duration;
+
+		// Snap the arrow back to its rest position on the bowstring BEFORE
+		// starting the scale tween. Without this, the arrow fades in at the
+		// pulled-back position from the previous draw because ApplyDrawPose
+		// skips position writes while _fadingNockedArrow is true.
+		NockedArrowVisual.LocalPosition = _nockedArrowOriginalPosition;
 
 		// Renderer stays enabled; we just shrink to zero so the tween has
 		// somewhere to grow from. Much simpler than alpha fading (which would

@@ -39,7 +39,10 @@ public sealed class BowWeapon : WeaponBase
 	/// <summary>
 	/// Path to the arrow model (project-relative, i.e. under Assets/).
 	/// </summary>
-	[Property, Group( "Visuals" )] public string ArrowModelPath { get; set; } = "sm_prop_weapon_arrow_dungeon.vmdl";
+	/// <summary>
+	/// Drag a .vmdl here. If null, projectiles fall back to the dev sphere.
+	/// </summary>
+	[Property, Group( "Visuals" )] public Model ArrowModel { get; set; }
 
 	[Property, Group( "Visuals" )] public bool ArrowTrail { get; set; } = true;
 	[Property, Group( "Visuals" )] public Color ArrowTrailColor { get; set; } = new Color( 1f, 0.92f, 0.75f );
@@ -186,6 +189,12 @@ public sealed class BowWeapon : WeaponBase
 
 		if ( Owner is null ) return;
 
+		// Snap the viewmodel bones back to rest BEFORE reading NockPoint.WorldPosition.
+		// Without this, the nock is still at the drawn-back position from last frame's
+		// bone pose and the arrow spawns behind the bowstring's rest position.
+		if ( _viewmodel is not null )
+			_viewmodel.ForceRestPose();
+
 		var eyePos = Owner.WorldPosition + Vector3.Up * Owner.EyeHeight;
 		var lookRot = Owner.EyeAngles.ToRotation();
 
@@ -234,7 +243,7 @@ public sealed class BowWeapon : WeaponBase
 			Owner,
 			speed: arrowSpeed,
 			gravity: ArrowGravity,
-			modelPath: ArrowModelPath,
+			model: ArrowModel,
 			useTrail: ArrowTrail,
 			trailColor: ArrowTrailColor,
 			modelAngleOffset: ArrowAngleOffset,

@@ -109,6 +109,19 @@ public static class DamageResolver
 			enemy.BroadcastDamageNumber( dmg, numberStyle, popPos );
 		}
 
+		// 8. Attacker-side hit confirmation sound — pitch-modulated by final damage.
+		//    Plays on the host (which is the local player in a listen server). Each
+		//    weapon stamps its own SoundEvent so bow/sword/beam/fire all sound different.
+		if ( attack.HitSound is not null )
+		{
+			var soundPos = ctx.ImpactPoint != Vector3.Zero ? ctx.ImpactPoint : targetObject.WorldPosition;
+			var ref_ = MathF.Max( 1f, attack.HitSoundReferenceDamage );
+			var t = MathF.Min( 1f, dmg / ref_ );
+			var pitch = MathX.Lerp( attack.HitSoundPitchMin, attack.HitSoundPitchMax, t );
+			var handle = Sound.Play( attack.HitSound, soundPos );
+			handle.Pitch = pitch;
+		}
+
 		return new DamageResult( dmg, isCrit, target.IsDead, ctx );
 	}
 

@@ -1,0 +1,14 @@
+{
+  "Title": "Mapping Enhanced",
+  "Type": "library",
+  "Org": "baks",
+  "Ident": "mappingenhanced",
+  "Schema": 1,
+  "IncludeSourceFiles": false,
+  "Resources": null,
+  "PackageReferences": [],
+  "EditorReferences": null,
+  "Mounts": null,
+  "IsStandaloneOnly": false,
+  "Metadata": {}
+}

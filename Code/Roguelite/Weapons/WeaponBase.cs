@@ -14,6 +14,16 @@ public abstract class WeaponBase : Component
 	[Property] public float BaseDamage { get; set; } = 35f;
 	[Property] public WeaponCategory Category { get; set; } = WeaponCategory.Sword;
 
+	/// <summary>
+	/// Attacker-side "I hit something" confirmation sound. Pitch is modulated by
+	/// damage — light taps are low, big crits are high. Drag a .sound asset here.
+	/// Each weapon gets its own: bow ping, sword clang, beam zap, etc.
+	/// </summary>
+	[Property, Group( "Hit Sound" )] public SoundEvent HitSound { get; set; }
+	[Property, Group( "Hit Sound" )] public float HitSoundPitchMin { get; set; } = 0.8f;
+	[Property, Group( "Hit Sound" )] public float HitSoundPitchMax { get; set; } = 1.5f;
+	[Property, Group( "Hit Sound" )] public float HitSoundReferenceDamage { get; set; } = 50f;
+
 	protected RoguelitePlayer Owner;
 
 	private readonly CooldownTracker _cooldowns = new();
@@ -52,7 +62,11 @@ public abstract class WeaponBase : Component
 	{
 		var dmg = BaseDamage * damageMultiplier;
 		// RunModifiers will be applied here in Phase 5
-		return new AttackData( dmg, type, canCrit, canKnockback, knockbackForce );
+		return new AttackData( dmg, type, canCrit, canKnockback, knockbackForce,
+			hitSound: HitSound,
+			hitSoundPitchMin: HitSoundPitchMin,
+			hitSoundPitchMax: HitSoundPitchMax,
+			hitSoundReferenceDamage: HitSoundReferenceDamage );
 	}
 
 	/// <summary>

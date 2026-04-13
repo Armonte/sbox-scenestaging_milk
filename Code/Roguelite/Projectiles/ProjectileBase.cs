@@ -233,13 +233,13 @@ public class ProjectileBase : Component
 
 	/// <summary>
 	/// Spawn a simple projectile.
-	/// Pass <paramref name="modelPath"/> to render a specific model — otherwise a
+	/// Pass a <paramref name="model"/> to render a specific mesh — otherwise a
 	/// small dev-sphere placeholder is used. Trail properties are set before
 	/// <c>NetworkSpawn</c> so they're picked up by <c>OnStart</c>.
 	/// </summary>
 	public static ProjectileBase Spawn( Scene scene, Vector3 position, Rotation rotation,
 		AttackData attack, Component attacker, float speed = 2000f, float gravity = 0f,
-		string modelPath = null, bool useTrail = false, Color? trailColor = null,
+		Model model = null, bool useTrail = false, Color? trailColor = null,
 		Angles modelAngleOffset = default, float modelScale = 1f,
 		bool stickOnHit = false, bool useHitboxes = false, bool debugHits = false )
 	{
@@ -263,9 +263,9 @@ public class ProjectileBase : Component
 			proj.TrailColor = trailColor.Value;
 
 		var renderer = obj.Components.Create<ModelRenderer>();
-		if ( !string.IsNullOrEmpty( modelPath ) )
+		if ( model is not null )
 		{
-			renderer.Model = Model.Load( modelPath );
+			renderer.Model = model;
 			obj.LocalScale = Vector3.One * modelScale;
 		}
 		else
